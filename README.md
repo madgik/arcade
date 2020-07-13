@@ -34,5 +34,5 @@ Random Access
 
 
 
-
-
+Compile join.cpp: 
+g++ -std=c++11 -o join join.cpp
