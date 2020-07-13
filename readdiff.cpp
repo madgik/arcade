@@ -17,8 +17,6 @@
 #include <iostream>
 #include <memory>
 
-#include "reader_writer.h"
-
 
 #include "orc/ColumnPrinter.hh"
 
