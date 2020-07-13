@@ -10,7 +10,6 @@
 #include <unistd.h>
 #include <map>
 #include <iterator>
-#include "main.h"
 using namespace std;
 
 struct D {
@@ -21,14 +20,27 @@ struct D {
     int lendiff;
     int diff;
     int minmaxsize;
+    int previndices;
 };
 
 struct fileH {
      int numofvals;
      int numofcols;
+     int numofblocks;
 };
 
+struct Dglob {
+    int minmaxsize;
+    int indicessize;
+    int bytes;
+    int numofvals;
+};
 
+struct fileHglob {
+     int numofvals;
+     int numofcols;
+     int glob_size;
+};
 
 
 
@@ -96,6 +108,40 @@ map<int, int> mergejoin(vector <rec> a, vector<rec> b){
  
     return c;
 }
+
+
+
+map<int, int> mergejoinglobal(vector <string> a, vector<string> b){
+    
+    int alen = a.size();
+    int blen = b.size();
+    map<int, int> c;
+    
+    int i = 0, j = 0, k = 0;
+ 
+    while (i < alen and j < blen)
+    {
+        if (a[i] < b[j]){
+            i++;
+            k++;
+            }
+        else if (a[i] > b[j]){
+            k++;
+            j++;
+            }
+        else {
+        	c.insert(std::make_pair(i, j+1));
+        	k++;
+        	j++;
+        
+        }
+    }
+
+        
+ 
+    return c;
+}
+
 
 
 map<int, int> mergejoinparquet(vector <rec> a, vector<rec> b){
@@ -167,10 +213,6 @@ int binarySearch1(vector <rec> a, string b){
     
     }
     return -1;
-
-
-
-
 }
 
 
@@ -249,10 +291,236 @@ vector<rec> merge(vector <rec> a, vector<string> b, int init){
 
 }
 
-int join_diffsequence(char *fptr1, char *fptr2){
-    
-    return 1;
 
+int join_global(int argc, char * argv[]){
+    int totalcount1=0;   
+    int totalcount2=0;  
+    FILE *f1, *f2;
+    f1 = fopen(argv[1],"rb");
+    f2 = fopen(argv[2],"rb");
+    
+    vector<string> parquetvalues1;
+    vector<string> parquetvalues2;
+    vector <string> global_dict1;
+    vector <string> global_dict2;
+    /*load file 1 in memory*/
+    fseek(f1, 0, SEEK_END);
+    long fsize1 = ftell(f1);
+    fseek(f1, 0, SEEK_SET);  
+    char *fptr1 = (char*)malloc(fsize1 + 1);
+    fread(fptr1, 1, fsize1, f1);
+    fclose(f1);
+    
+    /*load file 2 in memory*/
+    fseek(f2, 0, SEEK_END);
+    long fsize2 = ftell(f2);
+    fseek(f2, 0, SEEK_SET);  
+    char *fptr2 = (char*)malloc(fsize2 + 1);
+    fread(fptr2, 1, fsize2, f2);
+    fclose(f2);
+    
+    /*read marker of file*/
+    char marker[5];
+    memcpy( marker, &fptr1[0], 4);
+    memcpy( marker, &fptr2[0], 4);
+    
+    struct fileHglob fileheader1;
+	struct fileHglob fileheader2;
+    memcpy(&fileheader1,&fptr1[4], sizeof(struct fileHglob));
+    memcpy(&fileheader2,&fptr2[4], sizeof(struct fileHglob));
+    vector <vector <int>> index1;
+    vector <vector <int>> index2;
+    
+    unsigned int* t1 = new unsigned int[fileheader1.numofvals];
+    unsigned int* t2 = new unsigned int[fileheader2.numofvals];
+
+    
+	unsigned long initstep1 = 4 + sizeof(struct fileHglob);
+	unsigned long initstep2 = 4 + sizeof(struct fileHglob);
+	struct Dglob header1;
+	struct Dglob header2;
+	
+	
+	int count = 0;
+	vector<rec> c1;
+	vector<rec> c2;
+    int jointype = 0;
+    int case1 = -1;
+    int case2 = -1;
+	int join1 = atoi(argv[3]);
+	int join2 = atoi(argv[4]);
+
+    
+	char *buffer1 = (char*) malloc(fileheader1.glob_size);
+    memcpy(buffer1,&fptr1[initstep1],fileheader1.glob_size);
+    msgpack::unpacked result1;
+    unpack(result1, buffer1,fileheader1.glob_size);
+    vector<string> values1;
+    result1.get().convert(values1);
+    initstep1 += fileheader1.glob_size;
+
+    char *buffer2 = (char*) malloc(fileheader2.glob_size);
+
+    memcpy(buffer2,&fptr2[initstep2],fileheader2.glob_size);
+    
+    msgpack::unpacked result2;
+    unpack(result2, buffer2,fileheader2.glob_size);
+     
+    vector<string> values2;
+    result2.get().convert(values2);
+    initstep2 += fileheader2.glob_size;
+    rec rr;
+    
+    
+  	for (int i=0; i < values1.size(); i++){
+  			  rr.val = values1[i];
+  			  rr.rowid = i;
+  			  c1.push_back(rr);
+    }
+    
+  	sort(c1.begin(), c1.end(), compareByval);
+    
+    for (int i=0; i < values2.size(); i++){
+  			  rr.val = values2[i];
+  			  rr.rowid = i;
+  			  c2.push_back(rr);
+    }
+    
+  	sort(c1.begin(), c1.end(), compareByval);
+    
+    sort(c2.begin(), c2.end(), compareByval);
+    
+    
+    map<int, int> mapoffsets;
+  		
+  	mapoffsets = mergejoin(c1,c2);
+  	
+  	vector <int> a;
+  	vector<vector <int>> vect(values1.size(), a); 
+  	index1.insert( index1.end(), vect.begin(), vect.end() );
+  	
+  	vector <int> b;
+  	vector<vector <int>> vect2(values2.size(), b); 
+  	index2.insert( index2.end(), vect2.begin(), vect2.end() );
+ 
+    while (1){
+    if (totalcount1 < fileheader1.numofvals){
+            memcpy(&header1,&fptr1[initstep1], sizeof(struct Dglob));
+            totalcount1 += header1.numofvals;
+            int next = sizeof(struct Dglob) + header1.minmaxsize + header1.indicessize;
+            if (header1.indicessize == 4){
+                int offf;
+                memcpy(&offf, &fptr1[initstep1+sizeof(struct Dglob)+header1.minmaxsize], header1.indicessize);
+                for (int i=0; i < header1.numofvals; i++){
+     		    	index1[offf].push_back(i);
+     		    	count++;
+     		    }
+     			initstep1 += next;
+            
+            }
+        else{
+
+    		if (header1.bytes==1){ // two byte offsets
+    		    
+     			unsigned short offsets1 [header1.numofvals];
+     			memcpy(offsets1, &fptr1[initstep1+sizeof(struct Dglob)+header1.minmaxsize], header1.indicessize);
+     			
+				for (int i=0; i < header1.numofvals; i++){
+     			        //tree.Insert(offsets2[i],totalcount2-header2.numofvals+i);
+     			        index1[offsets1[i]].push_back(i);
+     			        
+     			        }
+
+     			initstep1 += next;
+     		}
+     		if (header1.bytes==0){ // four byte offsets
+     			unsigned int offsets1 [header1.numofvals];
+     			memcpy(offsets1, &fptr1[initstep1+sizeof(struct Dglob)+header1.minmaxsize], header1.indicessize);
+				for (int i=0; i < header1.numofvals; i++){
+     			        //tree.Insert(offsets2[i],totalcount2-header2.numofvals+i);
+     			        index1[offsets1[i]].push_back(i);
+     			        
+     			        }
+     			initstep1 += next;
+     		}
+     		if (header1.bytes==2){ // one byte offsets
+     			unsigned char offsets1 [header1.numofvals];
+     			memcpy(offsets1, &fptr1[initstep1+sizeof(struct Dglob)+header1.minmaxsize], header1.indicessize);
+     			for (int i=0; i < header1.numofvals; i++){
+     			        //tree.Insert(offsets2[i],totalcount2-header2.numofvals+i);
+     			        index1[offsets1[i]].push_back(i);
+     			        
+     			        }
+     			initstep1 += next;
+     		}
+
+     	}
+		
+    }
+    
+    if (totalcount2 < fileheader2.numofvals){
+            memcpy(&header2,&fptr2[initstep2], sizeof(struct Dglob));
+            totalcount2 += header2.numofvals;
+            int next = sizeof(struct Dglob) + header2.minmaxsize + header2.indicessize;
+            if (header2.indicessize == 4){
+                int offf;
+                memcpy(&offf, &fptr2[initstep2+sizeof(struct Dglob)+header2.minmaxsize], header2.indicessize);
+                for (int i=0; i < header2.numofvals; i++){
+                    
+     		    	index2[offf].push_back(i);
+     		    }
+     			initstep2 += next;
+            }
+        else{
+    		if (header2.bytes==1){ // two byte offsets
+    		    
+     			unsigned short offsets2 [header2.numofvals];
+     			memcpy(offsets2, &fptr2[initstep2+sizeof(struct Dglob)+header2.minmaxsize], header2.indicessize);
+				for (int i=0; i < header2.numofvals; i++){
+     			        //tree.Insert(offsets2[i],totalcount2-header2.numofvals+i);
+     			        index2[offsets2[i]].push_back(i);
+     			        
+     			        }
+     			initstep2 += next;
+     		}
+     		if (header2.bytes==0){ // four byte offsets
+     			unsigned int offsets2 [header2.numofvals];
+     			memcpy(offsets2, &fptr2[initstep2+sizeof(struct Dglob)+header2.minmaxsize], header2.indicessize);
+				for (int i=0; i < header2.numofvals; i++){
+     			        //tree.Insert(offsets2[i],totalcount2-header2.numofvals+i);
+     			        index2[offsets2[i]].push_back(i);
+     			        
+     			        }
+     			initstep2 += next;
+     		}
+     		if (header2.bytes==2){ // one byte offsets
+     			unsigned char offsets2 [header2.numofvals];
+     			memcpy(offsets2, &fptr2[initstep2+sizeof(struct Dglob)+header2.minmaxsize], header2.indicessize);
+     			for (int i=0; i < header2.numofvals; i++){
+     			        //tree.Insert(offsets2[i],totalcount2-header2.numofvals+i);
+     			        index2[offsets2[i]].push_back(i);
+     			        
+     			        }
+     			initstep2 += next;
+     		}	
+     	}
+		
+    }
+
+    
+    if (totalcount1 == fileheader1.numofvals and totalcount2 == fileheader2.numofvals) break;
+    }
+  	
+
+  	
+    long resultscount = 0;
+  	for (int i=0; i < index1.size(); i++){
+  		int j = mapoffsets[i] - 1;
+  		if (j >= 0)
+  			 for (int l=0; l < index1[i].size(); l++)
+ 				 resultscount += index2[j].size();
+ 		}
+  	    cout << resultscount << endl;
 }
 
 
@@ -301,8 +569,8 @@ int join_diff(int argc, char * argv[] ){
     //for(int i = 0; i < fileheader1.numofcols; ++i)
       //  t1[i] = new unsigned int[fileheader1.numofvals];
     
-	unsigned long initstep1 = 4 + sizeof(struct fileH);
-	unsigned long initstep2 = 4 + sizeof(struct fileH);
+	unsigned long initstep1 = 4 + sizeof(struct fileH) + fileheader1.numofblocks*8;
+	unsigned long initstep2 = 4 + sizeof(struct fileH) + fileheader2.numofblocks*8;
 	struct D header1;
 	struct D header2;
 	
@@ -326,6 +594,7 @@ int join_diff(int argc, char * argv[] ){
     */
 	int join1 = atoi(argv[3]);
 	int join2 = atoi(argv[4]);
+	
  	while (1){
     	/*read block header*/
     	
@@ -337,18 +606,17 @@ int join_diff(int argc, char * argv[] ){
    		    int current, next;
    		    memcpy(&current,&fptr1[initstep1+sizeof(int)*join1],sizeof(int));
    		    memcpy(&next,&fptr1[initstep1+sizeof(int)*(fileheader1.numofcols)],sizeof(int));
-
+   		    
             initstep1 += current + sizeof(int)*(fileheader1.numofcols+1);
             
    		    memcpy(&header1,&fptr1[initstep1], sizeof(struct D));
 
    		    if (header1.dictsize == 0){
-   		        
    		        if (totalcount1 == 0)
    		            parquetvalues1.reserve(fileheader1.numofvals);
    		        case1 = 1;
     		    char buffer1[header1.indicessize];
-    			memcpy(buffer1,&fptr1[initstep1+sizeof(struct D)],header1.indicessize);
+    			memcpy(buffer1,&fptr1[initstep1+sizeof(struct D)+header1.previndices*2],header1.indicessize);
     			msgpack::unpacked result1;
     			unpack(result1, buffer1, header1.indicessize);
     			vector<string> values1;
@@ -362,33 +630,25 @@ int join_diff(int argc, char * argv[] ){
   			        c1.push_back(rr);
   			    }
   			    sort(c1.begin(), c1.end(), compareByval);
-  			    
-  			    
-  			    
-  			    
   				}
   				else if(values1.size()>0){
   				    sort(values1.begin(), values1.end());
   			   		c1 = merge(c1, values1 , 0);
   			   		}
-    			
-    			
+    					
    				totalcount1 += header1.numofvals;
-   				initstep1 += next;
-    			
-    			
-  	
-   				
+   				initstep1 += next - current;
     		}
+    		
     		else {
+    		
    			char buffer1[header1.dictsize];
-    		memcpy(buffer1,&fptr1[initstep1+sizeof(struct D)]+header1.minmaxsize,header1.dictsize);
+       		memcpy(buffer1,&fptr1[initstep1+sizeof(struct D)+header1.previndices*2 + header1.minmaxsize],header1.dictsize);
     		msgpack::unpacked result1;
     		unpack(result1, buffer1, header1.dictsize);
     		vector<string> values1;
     		result1.get().convert(values1);
    			totalcount1 += header1.numofvals;
-   			
    			rec rr;
   			if (c1.size() == 0){
   			    for (int i=0; i < values1.size(); i++){
@@ -396,62 +656,60 @@ int join_diff(int argc, char * argv[] ){
   			        rr.rowid = i;
   			        c1.push_back(rr);
   			    }
-  			    
   			}
-  			
   			else if(values1.size()>0)
   			    c1 = merge(c1, values1, 0);
-  			    
   			case1 = 0;
   			vector <int> a;
   			vector<vector <int>> vect(values1.size(), a); 
   			index1.insert( index1.end(), vect.begin(), vect.end() );
   			/*read offsets of file 1*/
+  			
+  			
     		if (header1.bytes==1){ // two byte offsets
      			unsigned short offsets1 [header1.numofvals];
-     			memcpy(offsets1, &fptr1[initstep1+sizeof(struct D)+header1.minmaxsize+header1.dictsize], header1.indicessize);
+     			memcpy(offsets1, &fptr1[initstep1+sizeof(struct D)+header1.previndices*2+header1.minmaxsize+header1.dictsize], header1.indicessize);
 				for (int i=0; i < header1.numofvals; i++){
      			        //tree.Insert(offsets2[i],totalcount2-header2.numofvals+i);
      			        index1[offsets1[i]].push_back(i);
      			        
      			        }
-     			initstep1 += next;
+     			initstep1 += next- current;
      		}
      		if (header1.bytes==0){ // four byte offsets
      			unsigned int offsets1 [header1.numofvals];
-     			memcpy(offsets1, &fptr1[initstep1+sizeof(struct D)+header1.minmaxsize+header1.dictsize], header1.indicessize);
+     			memcpy(offsets1, &fptr1[initstep1+sizeof(struct D)+header1.previndices*2+header1.minmaxsize+header1.dictsize], header1.indicessize);
 				for (int i=0; i < header1.numofvals; i++){
      			        //tree.Insert(offsets2[i],totalcount2-header2.numofvals+i);
      			        index1[offsets1[i]].push_back(i);
      			        
      			        }
-     			initstep1 += next ;
+     			initstep1 += next - current;
      		}
      		if (header1.bytes==2){ // one byte offsets
      			unsigned char offsets1 [header1.numofvals];
-     			memcpy(offsets1, &fptr1[initstep1+sizeof(struct D)+header1.minmaxsize+header1.dictsize], header1.indicessize);
+     			memcpy(offsets1, &fptr1[initstep1+sizeof(struct D)+header1.previndices*2+header1.minmaxsize+header1.dictsize], header1.indicessize);
      			for (int i=0; i < header1.numofvals; i++){
      			        //tree.Insert(offsets2[i],totalcount2-header2.numofvals+i);
      			        index1[offsets1[i]].push_back(i);
      			        
      			        }
-     			initstep1 += next ;
-     		}
-
-  			
+     			initstep1 += next - current;
+     		}	
 		}
 		
    		
    		}
         
     	if (totalcount2 < fileheader2.numofvals){
+    	  
     	    int current, next;
 
    		    memcpy(&current,&fptr2[initstep2+sizeof(int)*join2],sizeof(int));
    		    memcpy(&next,&fptr2[initstep2+sizeof(int)*(fileheader2.numofcols)],sizeof(int));
             initstep2 += current + sizeof(int)*(fileheader2.numofcols+1);
             //cout << totalcount2 << endl;
-            
+           
     	
     		memcpy(&header2,&fptr2[initstep2], sizeof(struct D));
     		//cout << header2.dictsize << " " << header2.indicessize << " " << header2.numofvals << " " << header2.bytes <<" "<<header2.lendiff<< endl;
@@ -459,22 +717,22 @@ int join_diff(int argc, char * argv[] ){
     		    if (totalcount2 == 0)
    		            parquetvalues2.reserve(fileheader2.numofvals);
     		    char buffer2[header2.indicessize];
-    			memcpy(buffer2,&fptr2[initstep2+sizeof(struct D)],header2.indicessize);
+    			memcpy(buffer2,&fptr2[initstep2+sizeof(struct D)+header2.previndices*2],header2.indicessize);
     			msgpack::unpacked result2;
     			unpack(result2, buffer2, header2.indicessize);
     			vector<string> values2;
     			result2.get().convert(values2);
     			parquetvalues2.insert( parquetvalues2.end(), values2.begin(), values2.end() );
    				totalcount2 += header2.numofvals;
-   				initstep2 += next ;
+   				initstep2 += next - current;
    				case2 = 1;
     		
     		}
     		
     		else {
     		    
-    			char buffer2[header2.dictsize];
-    			memcpy(buffer2,&fptr2[initstep2+sizeof(struct D)]+header2.minmaxsize,header2.dictsize);
+    			char *buffer2 = (char*) malloc(header2.dictsize);
+    			memcpy(buffer2,&fptr2[initstep2+sizeof(struct D)+header2.previndices*2+header2.minmaxsize],header2.dictsize);
     			msgpack::unpacked result2;
     			unpack(result2, buffer2, header2.dictsize);
     			vector<string> values2;
@@ -482,6 +740,7 @@ int join_diff(int argc, char * argv[] ){
     			totalcount2 += header2.numofvals;
     		    case2 = 0;
     		    rec rr;
+    		    
     			if (c2.size() == 0){
   			    	for (int i=0; i < values2.size(); i++){
   			        	rr.val = values2[i];
@@ -501,7 +760,7 @@ int join_diff(int argc, char * argv[] ){
     		if (header2.bytes==1){ // two byte offsets
     		    
      			unsigned short offsets2 [header2.numofvals];
-     			memcpy(offsets2, &fptr2[initstep2+sizeof(struct D)+header2.minmaxsize+header2.dictsize], header2.indicessize);
+     			memcpy(offsets2, &fptr2[initstep2+sizeof(struct D)+header2.previndices*2+header2.minmaxsize+header2.dictsize], header2.indicessize);
      			if (atoi(argv[5]) != 1)
      			    for (int i=0; i < header2.numofvals; i++)
      			        t2[ totalcount2+i - header2.numofvals] = offsets2[i];
@@ -513,33 +772,33 @@ int join_diff(int argc, char * argv[] ){
      			        
      			        }
      			        
-     			initstep2 += next ;	
+     			initstep2 += next - current;	
      		}
-     		
+     		 
      		if (header2.bytes==0){ // four byte offsets
      			unsigned int offsets2 [header2.numofvals];
-     			memcpy(offsets2, &fptr2[initstep2+sizeof(struct D)+header2.minmaxsize+header2.dictsize], header2.indicessize);
+     			memcpy(offsets2, &fptr2[initstep2+sizeof(struct D)+header2.previndices*2+header2.minmaxsize+header2.dictsize], header2.indicessize);
      			if (atoi(argv[5]) != 1)
      			    for (int i=0; i < header2.numofvals; i++)
-     			        t2[ totalcount2+i - header2.numofvals] = offsets2[i];
+     			        t2[totalcount2+i - header2.numofvals] = offsets2[i];
      			else
      			    for (int i=0; i < header2.numofvals; i++)
      			        index2[offsets2[i]].push_back(i);
      			
-     			initstep2 += next ;	
+     			initstep2 += next - current;	
      		}
      		if (header2.bytes==2){ // one byte offsets
      			unsigned char offsets2 [header2.numofvals];
-     			memcpy(offsets2, &fptr2[initstep2+sizeof(struct D)+header2.minmaxsize+header2.dictsize], header2.indicessize);
+     			memcpy(offsets2, &fptr2[initstep2+sizeof(struct D)+header2.previndices*2+header2.minmaxsize+header2.dictsize], header2.indicessize);
      		if (atoi(argv[5]) != 1)
      			    for (int i=0; i < header2.numofvals; i++)
-     			        t2[ totalcount2+i - header2.numofvals] = offsets2[i];
+     			        t2[totalcount2+i - header2.numofvals] = offsets2[i];
      			else
      			    for (int i=0; i < header2.numofvals; i++){
      			        index2[offsets2[i]].push_back(i);
      			        }
      			        
-     			initstep2 += next ;
+     			initstep2 += next - current;
      		}
      		
         
@@ -687,14 +946,14 @@ int join_parquet(int argc, char * argv[] ){
     	/*read block header*/
    		
    		if (totalcount1 < fileheader1.numofvals){
-   		
+   		    
    		    int current, next;
    		    memcpy(&current,&fptr1[initstep1+sizeof(int)*join1],sizeof(int));
    		    memcpy(&next,&fptr1[initstep1+sizeof(int)*(fileheader1.numofcols)],sizeof(int));
             initstep1 += current + sizeof(int)*(fileheader1.numofcols+1);
             
    		    memcpy(&header1,&fptr1[initstep1], sizeof(struct D));
-
+            
    			char buffer1[header1.dictsize];
     		memcpy(buffer1,&fptr1[initstep1+sizeof(struct D)]+header1.minmaxsize,header1.dictsize);
     		msgpack::unpacked result1;
@@ -1235,6 +1494,9 @@ int main(int argc, char * argv[] ){
   
   if (strstr(argv[1], "diff"))
      return join_diff(argc,argv);
+  if (strstr(argv[1], "glob"))
+     return join_global(argc,argv);
+     
   return join_parquet(argc,argv);
 
 }

@@ -17,7 +17,6 @@
 #include <iostream>
 #include <memory>
 
-#include "reader_writer.h"
 
 
 #include "orc/ColumnPrinter.hh"
@@ -3406,7 +3405,45 @@ int read_glob_filt(int argc, char * argv[] ){
 }
 
 int random_access_glob(int argc, char * argv[] ){
-    return 1;
+    
+    int ommits = 0; 
+    int totalcount1=0;
+    FILE *f1;
+    f1 = fopen(argv[1],"rb");
+    vector <string> global_dict;
+    
+    /*load file 1 in memory*/
+  
+    fseek(f1, 0, SEEK_SET);  
+    
+    /*read marker of file*/
+    char marker[5];
+    result =  fread(marker, 4, 1, f1);
+    
+   
+    struct fileHglob fileheader1;
+    result =  fread(&fileheader1,sizeof(struct fileHglob), 1, f1);
+    vector <vector <int>> index1;
+    
+    int* col = new int[fileheader1.numofvals];
+    
+    
+
+	unsigned long initstep1 = 4 + sizeof(struct fileHglob);
+	struct Dglob header1;
+	
+	int count = 0;
+	int fcount = 0;
+
+	int join1 = atoi(argv[2]);
+
+	char buffer1[fileheader1.glob_size];
+    result =  fread(buffer1,fileheader1.glob_size,1,f1);
+    msgpack::unpacked result1;
+    unpack(result1, buffer1,fileheader1.glob_size);
+    vector<string> values1;
+    result1.get().convert(values1);
+    initstep1 += fileheader1.glob_size;
 }
 
 int random_access_mostly_orderedglob(int argc, char * argv[] ){
@@ -5030,6 +5067,44 @@ int random_access_orc(int argc, char * argv[]){
 }
 
 using namespace orc;
+
+
+int read_orc_mater(int argc, char * argv[]){
+    char **column;
+
+column = (char**)malloc(75531114 * sizeof(char*));
+for (int i = 0; i < 75531114; i++)
+    column[i] = (char*)malloc((15+1) * sizeof(char));
+    uint64_t batchSize = 65536;
+    orc::ReaderOptions readerOpts;
+    std::unique_ptr<orc::Reader> reader =
+    orc::createReader(orc::readFile(argv[1]), readerOpts);
+    std::unique_ptr<orc::RowReader> rowReader = reader->createRowReader();
+    std::unique_ptr<orc::ColumnVectorBatch> batch =
+    rowReader->createRowBatch(batchSize);
+
+    
+    unsigned long rows = 0;
+    std::string line;
+    char val[100];
+    StructVectorBatch *root =dynamic_cast<StructVectorBatch *>(batch.get());
+    StringVectorBatch *x = dynamic_cast<StringVectorBatch *>(root->fields[0]);
+    while (rowReader->next(*batch)) {
+    for (int i=0; i < batch->numElements; i++){
+      memcpy(column[rows],x->data[i], x->length[i]-1);
+      rows++;
+    }
+
+    }
+    cout << column[1000] << endl;
+    cout << rows << endl;
+
+
+
+
+}
+
+
 int read_orc_filt(int argc, char * argv[]){
     uint64_t batchSize = 65536;
     char* value = argv[3];
@@ -5215,7 +5290,7 @@ int main(int argc, char * argv[] ){
       if (strstr(argv[1], "parq"))
          return read_parquet(argc,argv);
       if (strstr(argv[1], "orc"))
-         return read_orc(argc,argv);
+         return read_orc_mater(argc,argv);
       if (strstr(argv[1], "indirect"))
          return read_indirect_mater(argc,argv);
       
