@@ -40,3 +40,30 @@ Random Access
 
 Compile join.cpp: 
 g++ -std=c++11 -o join join.cpp
+
+./join file1.diff file2.diff 0 1 (joins first col of file1.diff to the 2nd of file2.diff and returns the count)
+./join file1.glob file2.glob 0 1 (same as above but with global encoded files)
+./join file1.local file2.local 0 1 (same as above but with local encoded files)
+
+
+global_encoding.py
+
+
+
+
+Write files with Python libs
+dependencies: pandas, pyarrow
+
+import global_encoding 
+global_encoding.write_parquet(df, "file.parquet", -1) #writes parquet default parquet file
+global_encoding.write_parquet(df, "file.parquet", 65535) # each parquet block consists of 64K records
+global_encoding.write_global(df,"file.unorderedglob",0,65535) # encodes with global dictionaries
+global_encoding.write_global(df,"file.unorderedglob",1,65535) # encodes with order preserving dictionaries
+global_encoding.write_indirect(df,"file.unindirect",0,65535) # encodes with global dictionaries and indirect coding
+global_encoding.write_indirect(df,"file.indirect",1,65535) # encodes with order preserving dictionaries and indirect coding
+global_encoding.mostlyordered(df,"file.mostlyordered",65535,1,0.1,20); # encode with MOP's 1, 0.1 and 20 are the MOP's parameters pitch, lookahead and batch size
+
+
+
+
+
