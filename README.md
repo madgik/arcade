@@ -12,6 +12,7 @@ Syntax:
 
 Full scan
 ./read file.diff 0 (scans the 0 (first) column of the adaptively encoded file)
+./read file.localdiff 0 (scans the 0 (first) column of the local dictionary encoded file)
 ./read file.parquet 0 (scans the 0 (first) column of the parquet file)
 ./read file.orc 0 (scans the 0 (first) column of the ORC file)
 ./read file.orderedglob 0 (scans the 0 (first) column of the order preserving global dictionary file)
@@ -30,7 +31,6 @@ Range
 Random Access
 
 ./read file.diff 0 1000 (returns the value of row 1000)
-
 
 
 
