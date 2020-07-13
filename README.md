@@ -32,6 +32,10 @@ Random Access
 
 ./read file.diff 0 1000 (returns the value of row 1000)
 
+./join file1.diff file2.diff 0 1 (join the first column of the first file to the 2 column of the 2nd file, both files are encoded with differential dictionaries)
+./join file1.local file2.local 0 1 (same as above but with local dictionaries)
+
+
 
 
 Compile join.cpp: 
