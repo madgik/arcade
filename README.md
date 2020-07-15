@@ -64,6 +64,16 @@ global_encoding.write_indirect(df,"file.indirect",1,65535) # encodes with order 
 global_encoding.mostlyordered(df,"file.mostlyordered",65535,1,0.1,20); # encode with MOP's 1, 0.1 and 20 are the MOP's parameters pitch, lookahead and batch size
 
 
+Write adaptive dictionaries using fastparquet:
+from fastparquet import write
+%time write("friends.diff", df, row_group_offsets=65535)
+where df is a pandas dataframe and row_group_offsets is the size of a row group.
+
+
+
+
+
+
 
 
 
