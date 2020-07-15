@@ -10,7 +10,7 @@ It implements all read operations (full scan, filtered scan, range query, random
 
 Syntax:
 
-Full scan <br>
+<b>Full scan</b> <br>
 ./read file.diff 0 (scans the 0 (first) column of the adaptively encoded file) <br>
 ./read file.localdiff 0 (scans the 0 (first) column of the local dictionary encoded file)<br>
 ./read file.parquet 0 (scans the 0 (first) column of the parquet file)<br>
@@ -21,14 +21,14 @@ Full scan <br>
 ./read file.indirect 0 (scans the 0 (first) column of an indirect coded file)<br>
 <br>
 <br>
-Filtered scan<br>
+<b>Filtered scan</b><br>
 ./read file.diff 0 "value" 1 1 (searches "value" in 0 (first column) and returns the count, as for the 2 flags the first enables zone-maps, the second enables diff dict tighter min/max values)<br>
 The same command with different file endings (like above) processes the other file formats.<br>
 
-Range<br>
+<b>Range</b><br>
 ./read file.diff 0 "value" ">" 1 1 (same as above but with the range symbol added before the 2 flags)<br>
 
-Random Access<br>
+<b>Random Access</b><br>
 <br>
 ./read file.diff 0 1000 (returns the value of row 1000)<br>
 <br>
@@ -38,7 +38,7 @@ Random Access<br>
 <br>
 
 
-Compile join.cpp: <br>
+<b>Compile join.cpp:</b> <br>
 g++ -std=c++11 -o join join.cpp<br>
 
 ./join file1.diff file2.diff 0 1 (joins first col of file1.diff to the 2nd of file2.diff and returns the count)<br>
@@ -46,7 +46,7 @@ g++ -std=c++11 -o join join.cpp<br>
 ./join file1.local file2.local 0 1 (same as above but with local encoded files)<br>
 <br>
 
-global_encoding.py<br>
+<b>global_encoding.py</b><br>
 
 
 
@@ -64,7 +64,7 @@ global_encoding.write_indirect(df,"file.indirect",1,65535) # encodes with order 
 global_encoding.mostlyordered(df,"file.mostlyordered",65535,1,0.1,20); # encode with MOP's 1, 0.1 and 20 are the MOP's parameters pitch, lookahead and batch size<br>
 
 <br>
-Write adaptive dictionaries using fastparquet:<br>
+<b>Write adaptive dictionaries using fastparquet</b>:<br>
 from fastparquet import write<br>
 %time write("friends.diff", df, row_group_offsets=65535)<br>
 where df is a pandas dataframe and row_group_offsets is the size of a row group.<br>
