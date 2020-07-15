@@ -1,7 +1,7 @@
 # sigmod2021
 This repository will be finalized by 21/7
 
-Compile readdiff.cpp: <br>
+<b>Compile readdiff.cpp</b>: <br>
 g++ -std=c++11 -o read readdiff.cpp -lorc -lzstd -lprotobuf -lsnappy -llz4 -lz -lprotoc -lpthread -lparquet <br>
 
 Dependencies: all the libs that are in the above command + msgpack.hpp (https://github.com/msgpack/msgpack-c/tree/cpp_master)
