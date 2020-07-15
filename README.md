@@ -1,5 +1,5 @@
 # sigmod2021
-
+This repository will be finalized by 21/7
 
 Compile readdiff.cpp: 
 g++ -std=c++11 -o read readdiff.cpp -lorc -lzstd -lprotobuf -lsnappy -llz4 -lz -lprotoc -lpthread -lparquet
