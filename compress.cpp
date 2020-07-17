@@ -15,12 +15,12 @@
 #include <thread>
 #include <fstream>
 #include <cstring>
-#include <mutex>          // std::mutex
-#include "threadpool.h"
+#include <cmath>
+#include <sstream>
+#include <string>
+#include <fstream>
 
-std::mutex mtx;           // mutex for critical section
 
-#define split 8
   
 using namespace std;
 
@@ -46,39 +46,17 @@ struct rec {
      int val;
 };
 
+
 int BLOCKSIZE = 65535;
 int COLNUM = 1;
-int COUNT = 23677600;
 
 
-
+vector <int> sizediff;
 vector <string> globaldict;
 unordered_map<string, size_t> lookup;
+vector <short> diffvals;
 
 
-
-/*static int callback3(void* data, int argc, char** argv, char** azColName)
-{
-    hash<string> ptr_hash;
-    int filenum = ptr_hash(argv[0])%split;
-    fprintf(f1[filenum],"%s,%s\n",argv[0],argv[1]);
-    return 0;
-}*/
-
-int compress10(vector <char *> dataset,FILE *f1){
-
-    //printf("%s\n",dataset[0]);
-    set<string> s(dataset.begin(), dataset.end());
-    
-    set<string> set;
-    
-    
-    for (auto const& i: dataset) {
-        set.insert(i);
-    }
-    return 1;
-
-}
 
 vector <string> slice( vector <string>  const &v, int m, int n)
 {
@@ -87,6 +65,12 @@ vector <string> slice( vector <string>  const &v, int m, int n)
 
 
 int compress(vector <string> vec, FILE *f1){
+
+
+    struct D header;
+    header.numofvals = vec.size();
+    vector <string> minmax(2);
+    
     vector <string> vals = vec;
     //printf("%s\n",dataset[0].c_str());
     unordered_set<string> s;
@@ -97,27 +81,93 @@ int compress(vector <string> vec, FILE *f1){
     vec.assign( s.begin(), s.end() );
     sort( vec.begin(), vec.end() );
     vector<string> diff;
-    
+    minmax[0] = vec[0];
+    minmax[1] = vec[vec.size()-1];
     std::vector<string> glob = globaldict;
     std::sort(glob.begin(), glob.end());
     
     set_difference(vec.begin(), vec.end(), glob.begin(), glob.end(), std::inserter(diff, diff.begin()));
     
+    
+    
+    int diffdict = 1;
+    int ll = vec.size();
+    if (globaldict.size()+diff.size()>200000 or globaldict.size() == 0)
+        diffdict = 0;
+    else if (globaldict.size() > 0 and diff.size()*1.0/ll > 0.99)
+        diffdict = 0;
+    else if ((globaldict.size()>=256 and ll < 256) or (globaldict.size() >= 65536 and ll < 65536)  or  (globaldict.size() < 256 and (globaldict.size() + diff.size()) > 255) or ( globaldict.size() < 65536 and (globaldict.size() + diff.size()) > 65535)){
+        std::stringstream buffer;
+        msgpack::pack(buffer, diff);
+        string st = buffer.str();
+        int diffdictdump = st.size();
+            
+        int diffcount = sizediff.size(); 
+        int diffavg = 0;
+        if (diffcount>0)
+            diffavg = accumulate(sizediff.begin(), sizediff.end(), 0)/diffcount;
+        else{
+            std::stringstream buffer;
+            msgpack::pack(buffer, diff);
+            string st = buffer.str();
+            diffavg = diffdictdump;
+        }
+           
+        int lenvals3 = header.numofvals;
+        int locs = 0;
+        if (ll < 256) locs = 1;
+        else if (ll < 65536) locs = 2;
+        else locs = 4;
+        int diffs = 0;
+        if (globaldict.size()+diff.size() < 256) diffs = 1;
+        else if (globaldict.size()+diff.size() < 65536) diffs= 2;
+        else diffs = 4;
+        
+        std::stringstream bufferloc;
+        msgpack::pack(bufferloc, vec);
+        string stloc = bufferloc.str();
+        int sizelocal = stloc.size() + lenvals3*locs;
+        int sizeofdiff = diffdictdump + lenvals3*diffs;
+        
+        if (sizelocal < sizeofdiff)
+            diffdict = 0;
+        else if (diffcount*(diffs - locs) + diffcount*(diffdictdump-diffavg) - (sizelocal - sizeofdiff) > 0)
+            diffdict = 0;
+    
+    }
+    
+    
+if (diffdict == 1){
+   
     globaldict.insert(globaldict.end(), diff.begin(), diff.end());
-     
-/*
+
     
     int value = 0;
     for(size_t index = 0; index < globaldict.size(); ++index)
         lookup[globaldict[index]] = index;
+
     
+    std::stringstream buffermm;
+    msgpack::pack(buffermm, minmax);
+    string stmm = buffermm.str();
+    const char* ssmm = stmm.c_str();
+    header.minmaxsize = stmm.size();
+
     
     std::stringstream buffer;
     msgpack::pack(buffer, diff);
     string st = buffer.str();
     const char* ss = st.c_str();
-    fwrite(ss, strlen(ss) ,1 , f1 );
+    header.dictsize = st.size();
+    sizediff.push_back(header.dictsize);
+   
+    header.lendiff = diff.size();
     
+    diffvals.push_back(sizediff.size()-1);
+    diffvals.push_back(header.lendiff);
+    short* a = &diffvals[0];
+    header.previndices = diffvals.size();
+    header.diff = 0; // i am in diff dict
     if (globaldict.size()<256){
         char offsets[vals.size()];
         int k = 0;
@@ -125,6 +175,12 @@ int compress(vector <string> vec, FILE *f1){
             offsets[k] = lookup[i];
             k++;
         }
+        header.bytes = 2;
+        header.indicessize = vals.size()*sizeof(char);
+        fwrite(&header, sizeof(header), 1, f1);
+        fwrite(a, diffvals.size()*sizeof(short), 1, f1);
+        fwrite(ssmm, header.minmaxsize ,1 , f1 );
+        fwrite(ss, header.dictsize ,1 , f1 );
         fwrite(&offsets,sizeof(char),vals.size(),f1);
     }
     else if (globaldict.size()<65536){
@@ -134,6 +190,12 @@ int compress(vector <string> vec, FILE *f1){
             offsets[k] = lookup[i];
             k++;
         }
+        header.bytes = 1;
+        header.indicessize = vals.size()*sizeof(unsigned short);
+         fwrite(&header, sizeof(header), 1, f1);
+         fwrite(a, diffvals.size()*sizeof(short), 1, f1);
+         fwrite(ssmm, header.minmaxsize ,1 , f1 );
+         fwrite(ss, header.dictsize ,1 , f1 );
         fwrite(&offsets,sizeof(unsigned short),vals.size(),f1);
     }
     if (globaldict.size()>65536){
@@ -143,54 +205,107 @@ int compress(vector <string> vec, FILE *f1){
             offsets[k] =  lookup[i];
             k++;
         }
+        header.bytes = 0;
+        header.indicessize = vals.size()*sizeof(unsigned int);
+        fwrite(&header, sizeof(header), 1, f1);
+        fwrite(a, diffvals.size()*sizeof(short), 1, f1);
+        fwrite(ssmm, header.minmaxsize ,1 , f1 );
+        fwrite(ss, header.dictsize ,1 , f1 );
         fwrite(&offsets,sizeof(unsigned int),vals.size(),f1);
     }
    
+}
+
+else if (diffdict == 0){
+
+    globaldict.clear();
+    sizediff.clear();
+    diffvals.clear();
+    globaldict.insert(globaldict.end(), vec.begin(), vec.end());
+
     
+    int value = 0;
+    for(size_t index = 0; index < globaldict.size(); ++index)
+        lookup[globaldict[index]] = index;
+
+    
+    std::stringstream buffermm;
+    msgpack::pack(buffermm, minmax);
+    string stmm = buffermm.str();
+    const char* ssmm = stmm.c_str();
+    header.minmaxsize = stmm.size();
+
+    
+    std::stringstream buffer;
+    msgpack::pack(buffer, vec);
+    string st = buffer.str();
+    const char* ss = st.c_str();
+    header.dictsize = st.size();
+   
+    header.lendiff = vec.size();
+    
+    header.diff = 1; 
+    
+    diffvals.push_back(0);
+    diffvals.push_back(header.lendiff);
+    header.previndices = diffvals.size();
+    short* a = &diffvals[0];
+    
+    
+    if (globaldict.size()<256){
+        char offsets[vals.size()];
+        int k = 0;
+        for (string i: vals){
+            offsets[k] = lookup[i];
+            k++;
+        }
+        header.bytes = 2;
+        header.indicessize = vals.size()*sizeof(char);
+        fwrite(&header, sizeof(header), 1, f1);
+        fwrite(a, diffvals.size()*sizeof(short), 1, f1);
+        fwrite(ssmm, header.minmaxsize ,1 , f1 );
+        fwrite(ss, header.dictsize ,1 , f1 );
+        fwrite(&offsets,sizeof(char),vals.size(),f1);
+    }
+    else if (globaldict.size()<65536){
+        unsigned short offsets[vals.size()];
+        int k = 0;
+        for (string i: vals){
+            offsets[k] = lookup[i];
+            k++;
+        }
+        header.bytes = 1;
+        header.indicessize = vals.size()*sizeof(unsigned short);
+         fwrite(&header, sizeof(header), 1, f1);
+         fwrite(a, diffvals.size()*sizeof(short), 1, f1);
+         fwrite(ssmm, header.minmaxsize ,1 , f1 );
+         fwrite(ss, header.dictsize ,1 , f1 );
+        fwrite(&offsets,sizeof(unsigned short),vals.size(),f1);
+    }
+    if (globaldict.size()>65536){
+        unsigned int offsets[vals.size()];
+        int k = 0;
+        for (string i: vals){
+            offsets[k] =  lookup[i];
+            k++;
+        }
+        header.bytes = 0;
+        header.indicessize = vals.size()*sizeof(unsigned int);
+        fwrite(&header, sizeof(header), 1, f1);
+        fwrite(a, diffvals.size()*sizeof(short), 1, f1);
+        fwrite(ssmm, header.minmaxsize ,1 , f1 );
+        fwrite(ss, header.dictsize ,1 , f1 );
+        fwrite(&offsets,sizeof(unsigned int),vals.size(),f1);
+    }
+    
+
+}
     return 1;
-*/
+
 }
 
 
-int compression(vector<vector <string>> *table, char* token1, char* token2, int filenum, int (*len)[split],  FILE  *out){
-    //cout << filenum << " " << (*len)[filenum] << endl;
-    //(*table)[0][(*len)[filenum]] = (char*)malloc(3000);
-    //(*table)[1][(*len)[filenum]] = (char*)malloc(3000);
-    
-    (*table)[0][(*len)[filenum]] = string(token1);
-    (*table)[1][(*len)[filenum]] = string(token2);
-    
-    
-     (*len)[filenum] += 1;
-     if ((*len)[filenum] == 65535){
-        (*len)[filenum] = 0;
-       /* results.emplace_back(
-               (*pool).enqueue([table,out] {*/
-                //std::this_thread::sleep_for(std::chrono::milliseconds(100));
-         
-        
-         for (int i=0; i<65535; i++){
-             
-             //mtx.lock();
-             //*out << (*table)[0][i] << "," << (*table)[1][i];
-            fprintf(out, "%s,%s", (*table)[0][i].c_str(), (*table)[1][i].c_str());
-             //t1.join();
-             //mtx.unlock();
-         }
-   /* return 1;
-                            
-                    })
-                  );*/
-      
-     }
-    return 1;
-}
 
-
-
-#include <sstream>
-#include <string>
-#include <fstream>
 
 
 int main(int argc, char** argv)
@@ -199,7 +314,6 @@ int main(int argc, char** argv)
     std::ifstream infile("ips.csv");
     */
     std::ifstream infile("ips.csv");
-    std::ifstream outfile("ips.diff");
     
     FILE *f1;
     int columnindexes[COLNUM+1];
@@ -223,15 +337,25 @@ int main(int argc, char** argv)
            fclose(fp);
     }
     */
+    
+    
     string x;
     while (infile >> x) {
         dataset.push_back(x);
     }
     
-    cout << dataset[0] << endl;
+    fwrite("DIFF",4,1,f1);
+    struct fileH fileheader1;
+    fileheader1.numofcols = COLNUM;
+    fileheader1.numofvals = dataset.size();
+    fileheader1.numofblocks = ceil(fileheader1.numofvals*1.0/BLOCKSIZE);
+    fwrite(&fileheader1, sizeof(fileheader1), 1, f1);
+    long blocksizes[fileheader1.numofblocks+1];
+    long ft = ftell(f1);
+    fwrite(blocksizes, (fileheader1.numofblocks+1)*sizeof(long), 1, f1);
 
        int i = 0;
-       for (i=0; i < COUNT/BLOCKSIZE; i++){
+       for (i=0; i < fileheader1.numofvals/BLOCKSIZE; i++){
            long tell_init = ftell(f1);
            for (int k = 0; k < COLNUM+1; k++)
              fwrite(&columnindexes[k],sizeof(int),1,f1);
@@ -249,14 +373,18 @@ int main(int argc, char** argv)
            for (int k = 0; k < COLNUM+1; k++)
              fwrite(&columnindexes[k],sizeof(int),1,f1);
            fseek(f1,tell_end,SEEK_SET);
+           
+           blocksizes[i] = tell_init;
        }
            
        long tell = ftell(f1);
        for (int k = 0; k < COLNUM+1; k++)
            fwrite(&columnindexes[k],sizeof(int),1,f1);
        for (int j = 0; j < COLNUM; j++)
-           compress(slice(dataset,i*BLOCKSIZE,COUNT-1),f1);
+           compress(slice(dataset,i*BLOCKSIZE,fileheader1.numofvals-1),f1);
       
-    
+    fseek(f1,ft,SEEK_SET);
+    blocksizes[fileheader1.numofblocks] = BLOCKSIZE;
+    fwrite(blocksizes, (fileheader1.numofblocks+1)*sizeof(long), 1, f1);
     return (0);
 }
