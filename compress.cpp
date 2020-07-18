@@ -53,6 +53,7 @@ int COLNUM = 1;
 
 vector <int> sizediff;
 vector <string> globaldict;
+vector <string> glob;
 unordered_map<string, size_t> lookup;
 vector <short> diffvals;
 
@@ -64,27 +65,25 @@ vector <string> slice( vector <string>  const &v, int m, int n)
 }
 
 
-int compress(vector <string> vec, FILE *f1){
+int compress(vector <string> vals, FILE *f1){
 
 
     struct D header;
-    header.numofvals = vec.size();
+    header.numofvals = vals.size();
     vector <string> minmax(2);
-    
-    vector <string> vals = vec;
     //printf("%s\n",dataset[0].c_str());
     unordered_set<string> s;
-    for (string i : vec)
+    for (string i : vals)
         s.insert(i);
     
-    
+    vector <string> vec;
     vec.assign( s.begin(), s.end() );
     sort( vec.begin(), vec.end() );
     vector<string> diff;
     minmax[0] = vec[0];
     minmax[1] = vec[vec.size()-1];
-    std::vector<string> glob = globaldict;
-    std::sort(glob.begin(), glob.end());
+    //std::vector<string> glob = globaldict;
+    //std::sort(glob.begin(), glob.end());
     
     set_difference(vec.begin(), vec.end(), glob.begin(), glob.end(), std::inserter(diff, diff.begin()));
     
@@ -140,8 +139,11 @@ int compress(vector <string> vec, FILE *f1){
 if (diffdict == 1){
    
     globaldict.insert(globaldict.end(), diff.begin(), diff.end());
-
+    vector <string> temp(globaldict.size());
+    merge(glob.begin(), glob.end(),diff.begin(),diff.end(), temp.begin());
+    glob.assign( temp.begin(), temp.end() );
     
+
     int value = 0;
     for(size_t index = 0; index < globaldict.size(); ++index)
         lookup[globaldict[index]] = index;
@@ -222,7 +224,7 @@ else if (diffdict == 0){
     sizediff.clear();
     diffvals.clear();
     globaldict.insert(globaldict.end(), vec.begin(), vec.end());
-
+    glob = vec;
     
     int value = 0;
     for(size_t index = 0; index < globaldict.size(); ++index)
@@ -310,33 +312,22 @@ else if (diffdict == 0){
 
 int main(int argc, char** argv)
 {
-    /*vector<string> dataset(23677600);
-    std::ifstream infile("ips.csv");
-    */
-    std::ifstream infile("ips.csv");
+   
+    std::clock_t start;
+    double duration;
+    start = std::clock();
+    std::ifstream infile(argv[1]);
     
     FILE *f1;
     int columnindexes[COLNUM+1];
     memset( columnindexes, 0, COLNUM+1*sizeof(int) );
-    f1 = fopen("ips.diff","wb");
+    f1 = fopen(argv[2],"wb");
 
-   /* int res = 0;
-   std::string line;
-   while (std::getline(infile, line))
-   {
-       dataset[res++] = line;
-   }
-    */
+  
     
     vector<string> dataset;
 
-   /* if (FILE *fp = fopen("ips.csv", "r")) {
-           string buf;
-           while (size_t len = fread(&buf, 1, sizeof(buf), fp))
-               dataset.insert(dataset.end(), buf, buf + len);
-           fclose(fp);
-    }
-    */
+  
     
     
     string x;
@@ -344,15 +335,19 @@ int main(int argc, char** argv)
         dataset.push_back(x);
     }
     
+    duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
+
+    std::cout<<"csv import time: "<< duration <<'\n';
+    
     fwrite("DIFF",4,1,f1);
     struct fileH fileheader1;
     fileheader1.numofcols = COLNUM;
     fileheader1.numofvals = dataset.size();
     fileheader1.numofblocks = ceil(fileheader1.numofvals*1.0/BLOCKSIZE);
     fwrite(&fileheader1, sizeof(fileheader1), 1, f1);
-    long blocksizes[fileheader1.numofblocks+1];
+    long blocksizes[fileheader1.numofblocks];
     long ft = ftell(f1);
-    fwrite(blocksizes, (fileheader1.numofblocks+1)*sizeof(long), 1, f1);
+    fwrite(blocksizes, (fileheader1.numofblocks)*sizeof(long), 1, f1);
 
        int i = 0;
        for (i=0; i < fileheader1.numofvals/BLOCKSIZE; i++){
@@ -384,7 +379,7 @@ int main(int argc, char** argv)
            compress(slice(dataset,i*BLOCKSIZE,fileheader1.numofvals-1),f1);
       
     fseek(f1,ft,SEEK_SET);
-    blocksizes[fileheader1.numofblocks] = BLOCKSIZE;
-    fwrite(blocksizes, (fileheader1.numofblocks+1)*sizeof(long), 1, f1);
+    blocksizes[fileheader1.numofblocks-1] = BLOCKSIZE;
+    fwrite(blocksizes, (fileheader1.numofblocks)*sizeof(long), 1, f1);
     return (0);
 }
