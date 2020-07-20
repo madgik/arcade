@@ -72,9 +72,11 @@ where df is a pandas dataframe and row_group_offsets is the size of a row group.
 
 <br>
 <b>Write adaptive dictionaries with C (compress.cpp)</b>:<br>
-Compilation: g++ -std=c++11 -o compress compress.cpp
-Execution: ./compress datafile.csv datafile.diff
-compression.cpp works with single column files, the above Python implementation works also with multiple columns
+Compilation: g++ -std=c++11 -o compress compress.cpp <br>
+Execution: ./compress datafile.csv datafile.diff <br>
+compression.cpp works with single column files with a string attribute and was used to compare encoding times using C with ORC and Parquet C++ implementation. 
+
+The above Python implementation is more complete and works also with dataframes with many attributes.
 
 
 
