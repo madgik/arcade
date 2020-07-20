@@ -698,7 +698,7 @@ def encode_plain(vals,global_dict, sizediff, diffvals, se):
     	#headindex[7] = output.tell() - l2
     	
     	#### simple encoding
-        output.write(snappy.compress(msgpack.dumps(sdictvals)))
+        output.write(msgpack.dumps(sdictvals))
 
         l2 = output.tell()
         headindex[0] = l2-l1
@@ -719,7 +719,7 @@ def encode_plain(vals,global_dict, sizediff, diffvals, se):
         #type1 = np.int32
     #output.write(struct.pack(type1*len(offsets), *offsets))
         if minmax[0] != minmax[1]:
-            output.write(snappy.compress(array(type1,[coldict[y] for y in vals]).tostring()))
+            output.write(array(type1,[coldict[y] for y in vals]).tostring())
         else:
             output.write(struct.pack('i',coldict[minmax[0]]))
     
@@ -737,6 +737,7 @@ def encode_plain(vals,global_dict, sizediff, diffvals, se):
            
         
     else:
+        print("kaka")
         headindex[5]=0
         global_dict.extend(diff)
         headindex[2] = len(vals)
@@ -751,7 +752,7 @@ def encode_plain(vals,global_dict, sizediff, diffvals, se):
     	#headindex[7] = output.tell() - l2
     	
     	#### simple encoding
-        output.write(snappy.compress(msgpack.dumps(diff)))
+        output.write(msgpack.dumps(diff))
         l2 = output.tell()
         headindex[0] = l2-l1
         
@@ -776,7 +777,7 @@ def encode_plain(vals,global_dict, sizediff, diffvals, se):
         #type1 = np.int32
     #output.write(struct.pack(type1*len(offsets), *offsets))
         if minmax[0] != minmax[1]:
-            output.write(snappy.compress(array(type1,[coldict[y] for y in vals]).tostring()))
+            output.write(array(type1,[coldict[y] for y in vals]).tostring())
         else:
     	    output.write(struct.pack('i',coldict[minmax[0]]))
     #np.save(output, np.array([coldict[y] for y in vals], dtype=type1))
