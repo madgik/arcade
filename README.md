@@ -78,8 +78,11 @@ compression.cpp works with single column files with a string attribute and was u
 
 The above Python implementation is more complete and works also with dataframes with many attributes.
 
-
-
+Compression codecs are not implemented as user parameters but they were hard-coded to run some more experiments with compression. 
+In order to run with compression, someone has to edit fastparquet/writer.py file (encode_plain function) and update the lines that write to `output`.
+For example the line `output.write(msgpack.dumps(sdictvals))` needs to be converted to
+output.write(snappy.compress(msgpack.dumps(sdictvals))) in order to enable snappy compression.
+Similarly, the `readdiff.cpp` also needs the same edits to decompress before processing.
 
 
 
