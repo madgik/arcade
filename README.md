@@ -85,7 +85,7 @@ For example the line `output.write(msgpack.dumps(sdictvals))` needs to be conver
 output.write(snappy.compress(msgpack.dumps(sdictvals))) in order to enable snappy compression.
 Similarly, the `readdiff.cpp` also needs the same edits to decompress before processing.
 
-The datasets that are used in the experiments are big enough and could not be included in this repo. However, the data used is accessible through the links provided in the footnote of the paper and the exact datasets are reproducible either directly or given the explanations in the paper. 
+The datasets used in the experiments are big enough and could not be included in this repo. However, the data used is accessible through the links provided in the footnote of the paper and the exact datasets are reproducible either directly or given the explanations in the paper. 
 
 
 
