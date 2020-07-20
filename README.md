@@ -70,6 +70,14 @@ from fastparquet import write<br>
 where df is a pandas dataframe and row_group_offsets is the size of a row group.<br>
 
 
+<br>
+<b>Write adaptive dictionaries with C (compress.cpp)</b>:<br>
+Compilation: g++ -std=c++11 -o compress compress.cpp
+Execution: ./compress datafile.csv datafile.diff
+compression.cpp works with single column files, the above Python implementation works also with multiple columns
+
+
+
 
 
 
