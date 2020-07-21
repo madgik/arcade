@@ -611,7 +611,7 @@ def encode_plain_global(vals,global_dict, sizediff, diffvals, se):
 
 
 
-def encode_plain(vals,global_dict, sizediff, diffvals, se):
+def encode_plain(vals,global_dict, sizediff, diffvals, compression, se):
     """PLAIN encoding; returns byte representation"""
     sdictvals = sorted(vals.unique())
     
@@ -680,7 +680,6 @@ def encode_plain(vals,global_dict, sizediff, diffvals, se):
     #if len(global_dict)>200000 or len(global_dict) == 0:
     #    diffdict = 0
     if  diffdict == 0:
-        print("lala")
         headindex[5] = 1
         del global_dict[:]
         del sizediff[:]
@@ -698,7 +697,10 @@ def encode_plain(vals,global_dict, sizediff, diffvals, se):
     	#headindex[7] = output.tell() - l2
     	
     	#### simple encoding
-        output.write(msgpack.dumps(sdictvals))
+        if compression == 'SNAPPY':
+             output.write(snappy.compress(msgpack.dumps(sdictvals)))
+        else:
+             output.write(msgpack.dumps(sdictvals))
 
         l2 = output.tell()
         headindex[0] = l2-l1
@@ -719,7 +721,10 @@ def encode_plain(vals,global_dict, sizediff, diffvals, se):
         #type1 = np.int32
     #output.write(struct.pack(type1*len(offsets), *offsets))
         if minmax[0] != minmax[1]:
-            output.write(array(type1,[coldict[y] for y in vals]).tostring())
+            if compression == 'SNAPPY':
+                output.write(snappy.compress(array(type1,[coldict[y] for y in vals]).tostring()))
+            else:
+                output.write(array(type1,[coldict[y] for y in vals]).tostring())
         else:
             output.write(struct.pack('i',coldict[minmax[0]]))
     
@@ -737,7 +742,6 @@ def encode_plain(vals,global_dict, sizediff, diffvals, se):
            
         
     else:
-        print("kaka")
         headindex[5]=0
         global_dict.extend(diff)
         headindex[2] = len(vals)
@@ -752,7 +756,10 @@ def encode_plain(vals,global_dict, sizediff, diffvals, se):
     	#headindex[7] = output.tell() - l2
     	
     	#### simple encoding
-        output.write(msgpack.dumps(diff))
+        if compression == 'SNAPPY':
+            output.write(snappy.compress(msgpack.dumps(diff)))
+        else:
+             output.write(msgpack.dumps(diff))
         l2 = output.tell()
         headindex[0] = l2-l1
         
@@ -777,6 +784,9 @@ def encode_plain(vals,global_dict, sizediff, diffvals, se):
         #type1 = np.int32
     #output.write(struct.pack(type1*len(offsets), *offsets))
         if minmax[0] != minmax[1]:
+          if compression == 'SNAPPY':
+            output.write(snappy.compress(array(type1,[coldict[y] for y in vals]).tostring()))
+          else:
             output.write(array(type1,[coldict[y] for y in vals]).tostring())
         else:
     	    output.write(struct.pack('i',coldict[minmax[0]]))
@@ -871,7 +881,7 @@ encode = {
 }
 
 
-def make_definitions(data,global_dictionary, sizediff, diffvals, no_nulls):
+def make_definitions(data,global_dictionary, sizediff, diffvals, compression, no_nulls):
     """For data that can contain NULLs, produce definition levels binary
     data: either bitpacked bools, or (if number of nulls == 0), single RLE
     block."""
@@ -886,7 +896,7 @@ def make_definitions(data,global_dictionary, sizediff, diffvals, no_nulls):
         out = data
     else:
         se = parquet_thrift.SchemaElement(type=parquet_thrift.Type.BOOLEAN)
-        out = encode_plain(data.notnull(),global_dictionary, sizediff, diffvals, se)
+        out = encode_plain(data.notnull(),global_dictionary, sizediff, diffvals,compression, se)
 
         encode_unsigned_varint(len(out) << 1 | 1, temp)
         head = temp.so_far().tostring()
@@ -932,7 +942,7 @@ def write_column(f,global_dictionary, sizediff, diffvals, data, selement, compre
             num_nulls = 0
         else:
             num_nulls = len(data) - data.count()
-        definition_data, data = make_definitions(data,global_dictionary, sizediff, diffvals, num_nulls == 0)
+        definition_data, data = make_definitions(data,global_dictionary, sizediff, diffvals,compression, num_nulls == 0)
         if data.dtype.kind == "O" and not is_categorical_dtype(data.dtype):
             try:
                 if selement.type == parquet_thrift.Type.INT64:
@@ -1002,7 +1012,7 @@ def write_column(f,global_dictionary, sizediff, diffvals, data, selement, compre
         data = data.astype('int32')
 
     bdata = encode[encoding](
-            data,global_dictionary, sizediff, diffvals, selement)
+            data,global_dictionary, sizediff, diffvals,compression, selement)
     
     
     #bdata += 8 * b'\x00'
@@ -1030,11 +1040,8 @@ def write_column(f,global_dictionary, sizediff, diffvals, data, selement, compre
     l0 = len(bdata)
     
 
-    if compression:
-        bdata = compress_data(bdata, compression)
-        l1 = len(bdata)
-    else:
-        l1 = l0
+    
+    l1 = l0
     diff += l0 - l1
     ph = parquet_thrift.PageHeader(type=parquet_thrift.PageType.DATA_PAGE,
                                    uncompressed_page_size=l0,
