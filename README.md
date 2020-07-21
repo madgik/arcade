@@ -36,7 +36,7 @@ The same command with different file endings (like above) processes the other fi
 ./join file1.local file2.local 0 1 (same as above but with local dictionaries)<br>
 
 <br>
-
+All the above run also on snappy compressed adaptive files if the file is named file.diffsnappy <br>
 
 <b>Compile join.cpp:</b> <br>
 g++ -std=c++11 -o join join.cpp<br>
