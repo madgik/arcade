@@ -31,9 +31,8 @@ The same command with different file endings (like above) processes the other fi
 <b>Random Access</b><br>
 <br>
 ./read file.diff 0 1000 (returns the value of row 1000)<br>
-<br>
-./join file1.diff file2.diff 0 1 (join the first column of the first file to the 2 column of the 2nd file, both files are encoded with differential dictionaries)<br>
-./join file1.local file2.local 0 1 (same as above but with local dictionaries)<br>
+
+All the above run also on snappy compressed adaptive files if the file is named file.diffsnappy <br>
 
 <br>
 
@@ -83,7 +82,6 @@ Compression codecs are not implemented as user parameters but they were hard-cod
 In order to run with compression, someone has to edit fastparquet/writer.py file (encode_plain function) and update the lines that write to `output`.
 For example the line `output.write(msgpack.dumps(sdictvals))` needs to be converted to
 `output.write(snappy.compress(msgpack.dumps(sdictvals)))` in order to enable snappy compression.
-Similarly, the `readdiff.cpp` also needs the same edits when reading from the file to decompress before processing.
 
 The datasets used in the experiments are big enough and could not be included in this repo. However, the data used is accessible through the links provided in the footnote of the paper and the exact datasets are reproducible either directly or given the explanations in the paper. 
 
