@@ -3,9 +3,11 @@
 <b>Compile readdiff.cpp</b>: <br>
 g++ -std=c++11 -o read readdiff.cpp -lorc -lzstd -lprotobuf -lsnappy -llz4 -lz -lprotoc -lpthread -lparquet <br>
 
-Dependencies: all the libs that are in the above command + msgpack.hpp (https://github.com/msgpack/msgpack-c/tree/cpp_master)
+The above libs are dependencies for Apache ORC C++ and Arrow Parquet C++ implementations 
+msgpack.hpp (https://github.com/msgpack/msgpack-c/tree/cpp_master) is also a dependency.
 
-It implements all read operations (full scan, filtered scan, range query, random row look-up) for all the formats that are mentioned in the paper.
+
+It implements all read operations (full scan, filtered scan, range query, random row look-up) for all the formats that are used in the paper.
 
 Syntax:
 
@@ -79,7 +81,12 @@ The above Python implementation is more complete and works also with dataframes 
 
 <br>
 
-The datasets used in the experiments are big enough and could not be included in this repo. However, the data used is accessible through the links provided in the footnote of the paper and the exact datasets are reproducible either directly or given the explanations in the paper. 
+Local dictionaries are not implemented alone. If someone wants to encode with local dictionaries in python's implementation in file fastparquet/writer.py before line 682 a hard coded `diffdict = 0` statement should be added.
+In C++ implementation in compress.cpp file the same should be added before line 136. Doing this the cost function can be disabled.
+Also commenting lines 91-134 in C++ and 643-671 in python will remove the cost function calculations and its overheads. 
+With `diffdict = 1` it is possible to run it without the cost function using only differential encoding.
+
+The datasets used in the experiments are too big and could not be included in this repo. However, the data used is accessible through the links provided in the footnote of the paper and the exact datasets are reproducible either directly or given the explanations in the paper. 
 
 
 
