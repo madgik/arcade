@@ -65,7 +65,8 @@ global_encoding.mostlyordered(df,"file.mostlyordered",65535,1,0.1,20); # encode 
 <br>
 <b>Write adaptive dictionaries using fastparquet</b>:<br>
 from fastparquet import write<br>
-%time write("friends.diff", df, row_group_offsets=65535)<br>
+%time write("file.diff", df, row_group_offsets=65535)<br>
+%time write("file.diffsnappy", df, row_group_offsets=65535, compression='SNAPPY')<br>
 where df is a pandas dataframe and row_group_offsets is the size of a row group.<br>
 
 
@@ -77,11 +78,7 @@ compression.cpp works with single column files with a string attribute and was u
 
 The above Python implementation is more complete and works also with dataframes with many attributes. <br>
 
-<b>Some comments</b>:<br>
-Compression codecs are not implemented as user parameters but they were hard-coded to run some more experiments with compression. 
-In order to run with compression, someone has to edit fastparquet/writer.py file (encode_plain function) and update the lines that write to `output`.
-For example the line `output.write(msgpack.dumps(sdictvals))` needs to be converted to
-`output.write(snappy.compress(msgpack.dumps(sdictvals)))` in order to enable snappy compression.
+<br>
 
 The datasets used in the experiments are big enough and could not be included in this repo. However, the data used is accessible through the links provided in the footnote of the paper and the exact datasets are reproducible either directly or given the explanations in the paper. 
 
