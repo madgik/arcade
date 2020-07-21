@@ -17,9 +17,8 @@
 #include <iostream>
 #include <memory>
 
-//#include "reader_writer.h"
 
-
+#include "snappy.h"
 #include "orc/ColumnPrinter.hh"
 
 #include "orc/Exceptions.hh"
@@ -109,6 +108,8 @@ struct fileH_mostlyorderedglob {
      int sortedsize;
      int totalsize;
 };
+
+int SNAPPY = 0;
 
 size_t result;
   
@@ -2979,11 +2980,14 @@ int read_diff_materialize(int argc, char * argv[] ){
    		    memcpy(&next,&fptr1[initstep1+sizeof(int)*(fileheader1.numofcols)],sizeof(int));
             initstep1 += current + sizeof(int)*(fileheader1.numofcols+1);
    		    memcpy(&header1,&fptr1[initstep1], sizeof(struct D));
+   //		    cout << header1.dictsize << " "<< header1.indicessize <<" "<< header1.numofvals << " "<< header1.minmaxsize << " "<< header1.bytes <<endl;
+       
    		    
    		    if (header1.dictsize == 0){
    		        if (totalcount1 == 0)
    		            parquetvalues1.reserve(fileheader1.numofvals);
     		    char buffer1[header1.indicessize];
+
     			memcpy(buffer1,&fptr1[initstep1+sizeof(struct D)],header1.indicessize);
     			msgpack::unpacked result1;
     			unpack(result1, buffer1, header1.indicessize);
@@ -2992,25 +2996,42 @@ int read_diff_materialize(int argc, char * argv[] ){
     			parquetvalues1.insert( parquetvalues1.end(), values1.begin(), values1.end() );
    				totalcount1 += header1.numofvals;
    				initstep1 += next-current;
+
     		}
     		else {
+            
+            vector<string> values1;
+            if (SNAPPY){
+   			  char buffer1[header1.dictsize];
+    		  memcpy(buffer1,&fptr1[initstep1+sizeof(struct D)+ header1.previndices*2 + header1.minmaxsize],header1.dictsize);
+    		  string output;
+    		  snappy::Uncompress(buffer1, header1.dictsize, &output);
+    		  msgpack::unpacked result1;
+    		  unpack(result1, output.data(), output.size());
+    		  result1.get().convert(values1);
+    		}
+    		else {
+    		  char buffer1[header1.dictsize];
+    		  memcpy(buffer1,&fptr1[initstep1+sizeof(struct D)+ header1.previndices*2 + header1.minmaxsize],header1.dictsize);
+    		  msgpack::unpacked result1;
+    		  unpack(result1, buffer1, header1.dictsize);
+    		  result1.get().convert(values1);
+    		}
     		
-   			char buffer1[header1.dictsize];
-    		memcpy(buffer1,&fptr1[initstep1+sizeof(struct D)+ header1.previndices*2 + header1.minmaxsize],header1.dictsize);
-    		msgpack::unpacked result1;
-    		unpack(result1, buffer1, header1.dictsize);
-    		vector<string> values1;
-    		result1.get().convert(values1);
+    		
    			totalcount1 += header1.numofvals;
+
    			if (header1.diff == 1){
    			    global_dict.clear();
    			}
+
    			
    			global_dict.insert(global_dict.end(), values1.begin(), values1.end());
 
    			int lendict = global_dict.size();
    			if (header1.indicessize == 4){
                 int offf;
+                
                 memcpy(&offf, &fptr1[initstep1+sizeof(struct D)+header1.previndices*2+header1.dictsize+header1.minmaxsize], header1.indicessize);
                 if (offf < lendict)
                 for (int i=0; i < header1.numofvals; i++){
@@ -3028,7 +3049,17 @@ int read_diff_materialize(int argc, char * argv[] ){
             else{
     		if (header1.bytes==1){ // two byte offsets /*read offsets of file 1*/
      			unsigned short offsets1 [header1.numofvals];
+     			if (SNAPPY){
+   			       char buffer1[header1.indicessize];
+    		       memcpy(buffer1,&fptr1[initstep1+sizeof(struct D)+header1.previndices*2+header1.dictsize+header1.minmaxsize], header1.indicessize);
+    		       string output;
+    		       snappy::Uncompress(buffer1, header1.indicessize, &output);
+    		       
+    		       copy(&output[0], &output[0]+(sizeof(unsigned short)*header1.numofvals), reinterpret_cast<char*>(offsets1));
+    		    }
+    		    else 
      			memcpy(offsets1, &fptr1[initstep1+sizeof(struct D)+header1.previndices*2+header1.dictsize+header1.minmaxsize], header1.indicessize);
+     			
 				if (values1.size()>0)
      			for (int i=0; i < header1.numofvals; i++){
 				    if (offsets1[i] < lendict)
@@ -3046,6 +3077,14 @@ int read_diff_materialize(int argc, char * argv[] ){
      		}
      		if (header1.bytes==0){ // four byte offsets
      			unsigned int offsets1 [header1.numofvals];
+     			if (SNAPPY){
+   			       char buffer1[header1.indicessize];
+    		       memcpy(buffer1,&fptr1[initstep1+sizeof(struct D)+header1.previndices*2+header1.dictsize+header1.minmaxsize], header1.indicessize);
+    		       string output;
+    		       snappy::Uncompress(buffer1, header1.indicessize, &output);
+    		       copy(&output[0], &output[0]+(sizeof(unsigned int)*header1.numofvals), reinterpret_cast<char*>(offsets1));
+    		    }
+    		    else
      			memcpy(offsets1, &fptr1[initstep1+sizeof(struct D)+header1.previndices*2+header1.dictsize+header1.minmaxsize], header1.indicessize);
 				if (values1.size()>0)
      			for (int i=0; i < header1.numofvals; i++){
@@ -3065,6 +3104,15 @@ int read_diff_materialize(int argc, char * argv[] ){
      		}
      		if (header1.bytes==2){ // one byte offsets
      			unsigned char offsets1 [header1.numofvals];
+     			if (SNAPPY){
+   			       char buffer1[header1.indicessize];
+    		       memcpy(buffer1,&fptr1[initstep1+sizeof(struct D)+header1.previndices*2+header1.dictsize+header1.minmaxsize], header1.indicessize);
+    		       string output;
+    		       snappy::Uncompress(buffer1, header1.indicessize, &output);
+    		       
+    		       copy(&output[0], &output[0]+(sizeof(unsigned char)*header1.numofvals), reinterpret_cast<char*>(offsets1));
+    		    }
+    		    else
      			memcpy(offsets1, &fptr1[initstep1+sizeof(struct D)+header1.previndices*2+header1.dictsize+header1.minmaxsize], header1.indicessize);
      			if (values1.size()>0)
      			for (int i=0; i < header1.numofvals; i++){
@@ -3088,7 +3136,7 @@ int read_diff_materialize(int argc, char * argv[] ){
 		}
 	}
 
-    cout << count << column[10000000]<< endl;
+    cout << count << " " << column[10000000]<< endl;
     fclose(f1);
     return 0; 
 
@@ -3150,13 +3198,23 @@ int read_diff(int argc, char * argv[] ){
    				initstep1 += next-current;
     		}
     		else {
-    		
+    	   vector<string> values1;
+    	   if (SNAPPY){
+   			  char buffer1[header1.dictsize];
+    		  memcpy(buffer1,&fptr1[initstep1+sizeof(struct D)+ header1.previndices*2 + header1.minmaxsize],header1.dictsize);
+    		  string output;
+    		  snappy::Uncompress(buffer1, header1.dictsize, &output);
+    		  msgpack::unpacked result1;
+    		  unpack(result1, output.data(), output.size());
+    		  result1.get().convert(values1);
+    		}
+    		else {
    			char buffer1[header1.dictsize];
     		memcpy(buffer1,&fptr1[initstep1+sizeof(struct D)+ header1.previndices*2 + header1.minmaxsize],header1.dictsize);
     		msgpack::unpacked result1;
     		unpack(result1, buffer1, header1.dictsize);
-    		vector<string> values1;
     		result1.get().convert(values1);
+    		}
    			totalcount1 += header1.numofvals;
    			if (header1.diff == 1){
    			    global_dict.clear();
@@ -3182,6 +3240,15 @@ int read_diff(int argc, char * argv[] ){
             else{
     		if (header1.bytes==1){ // two byte offsets /*read offsets of file 1*/
      			unsigned short offsets1 [header1.numofvals];
+     			if (SNAPPY){
+   			       char buffer1[header1.indicessize];
+    		       memcpy(buffer1,&fptr1[initstep1+sizeof(struct D)+header1.previndices*2+header1.dictsize+header1.minmaxsize], header1.indicessize);
+    		       string output;
+    		       snappy::Uncompress(buffer1, header1.indicessize, &output);
+    		       
+    		       copy(&output[0], &output[0]+(sizeof(unsigned short)*header1.numofvals), reinterpret_cast<char*>(offsets1));
+    		    }
+    		    else 
      			memcpy(offsets1, &fptr1[initstep1+sizeof(struct D)+header1.previndices*2+header1.dictsize+header1.minmaxsize], header1.indicessize);
 				//if (values1.size()>0)
      			for (int i=0; i < header1.numofvals; i++){
@@ -3200,6 +3267,15 @@ int read_diff(int argc, char * argv[] ){
      		}
      		if (header1.bytes==0){ // four byte offsets
      			unsigned int offsets1 [header1.numofvals];
+     			if (SNAPPY){
+   			       char buffer1[header1.indicessize];
+    		       memcpy(buffer1,&fptr1[initstep1+sizeof(struct D)+header1.previndices*2+header1.dictsize+header1.minmaxsize], header1.indicessize);
+    		       string output;
+    		       snappy::Uncompress(buffer1, header1.indicessize, &output);
+    		       
+    		       copy(&output[0], &output[0]+(sizeof(unsigned int)*header1.numofvals), reinterpret_cast<char*>(offsets1));
+    		    }
+    		    else 
      			memcpy(offsets1, &fptr1[initstep1+sizeof(struct D)+header1.previndices*2+header1.dictsize+header1.minmaxsize], header1.indicessize);
 				//if (values1.size()>0)
      			for (int i=0; i < header1.numofvals; i++){
@@ -3219,6 +3295,15 @@ int read_diff(int argc, char * argv[] ){
      		}
      		if (header1.bytes==2){ // one byte offsets
      			unsigned char offsets1 [header1.numofvals];
+     			if (SNAPPY){
+   			       char buffer1[header1.indicessize];
+    		       memcpy(buffer1,&fptr1[initstep1+sizeof(struct D)+header1.previndices*2+header1.dictsize+header1.minmaxsize], header1.indicessize);
+    		       string output;
+    		       snappy::Uncompress(buffer1, header1.indicessize, &output);
+    		       
+    		       copy(&output[0], &output[0]+(sizeof(unsigned char)*header1.numofvals), reinterpret_cast<char*>(offsets1));
+    		    }
+    		    else 
      			memcpy(offsets1, &fptr1[initstep1+sizeof(struct D)+header1.previndices*2+header1.dictsize+header1.minmaxsize], header1.indicessize);
      			//if (values1.size()>0)
      			for (int i=0; i < header1.numofvals; i++){
@@ -3478,7 +3563,7 @@ int random_access_diff(int argc, char * argv[] ){
         result =  fread(data,fileheader1.numofblocks*8,1,f1);
         int blocknum = row/data[fileheader1.numofblocks -1];
         int rowid = row%data[fileheader1.numofblocks -1];
-
+        
         unsigned long initstep1 = data[blocknum];
         struct D header1;
         
@@ -3494,41 +3579,77 @@ int random_access_diff(int argc, char * argv[] ){
         result =  fread(&header1, sizeof(struct D),1,f1);
         unsigned short int previndex[header1.previndices];
         result =  fread(previndex, header1.previndices * 2, 1, f1);
-    /*cout << header1.previndices << endl;
-    for (int i = 0; i<header1.previndices; i++)
-        cout << previndex[i] << endl;*/
+
+   
         
         if (header1.dictsize == 0){
+                    vector<string> values1;
                     char buffer1[header1.indicessize];
                     fseek(f1,initstep1+sizeof(struct D)+header1.previndices*2, SEEK_SET);
                     result =  fread(buffer1,header1.indicessize,1,f1);
                     msgpack::unpacked result1;
                     unpack(result1, buffer1, header1.indicessize);
-                    vector<string> values1;
                     result1.get().convert(values1);
                     cout << values1[rowid] << endl;
                     return 1;
+                
         }
         else if (header1.diff == 0){
             int off;
               if (header1.bytes==1){ // two byte offsets /*read offsets of file 1*/
+              if (SNAPPY){
+                  fseek(f1,initstep1+sizeof(struct D)+header1.dictsize+header1.previndices*2 + header1.minmaxsize,SEEK_SET);
+                   unsigned short offsets1[header1.numofvals];
+   			       char buffer1[header1.indicessize];
+   			       result =  fread(buffer1,header1.indicessize,1,f1);
+    		       string output;
+    		       snappy::Uncompress(buffer1, header1.indicessize, &output);
+    		       copy(&output[0], &output[0]+(sizeof(unsigned short)*header1.numofvals), reinterpret_cast<char*>(offsets1));
+    		       off = offsets1[rowid];
+    		    }
+    		    else{
                   unsigned short offsets1;
                   fseek(f1,initstep1+sizeof(struct D)+header1.dictsize+header1.previndices*2 + header1.minmaxsize+rowid*2,SEEK_SET);
                   result =  fread(&offsets1,2,1,f1);
                   off = offsets1;
+                  }
               }
               
               if (header1.bytes==0){ // four byte offsets
+                  if (SNAPPY){
+                  fseek(f1,initstep1+sizeof(struct D)+header1.dictsize+header1.previndices*2 + header1.minmaxsize,SEEK_SET);
+                   unsigned int offsets1[header1.numofvals];
+   			       char buffer1[header1.indicessize];
+   			       result =  fread(buffer1,header1.indicessize,1,f1);
+    		       string output;
+    		       snappy::Uncompress(buffer1, header1.indicessize, &output);
+    		       copy(&output[0], &output[0]+(sizeof(unsigned int)*header1.numofvals), reinterpret_cast<char*>(offsets1));
+    		       off = offsets1[rowid];
+    		    }
+    		    else{
                   unsigned int offsets1;
                   fseek(f1,initstep1+sizeof(struct D)+header1.dictsize +header1.previndices*2+ header1.minmaxsize+rowid*4,SEEK_SET);
                   result =  fread(&offsets1,4,1,f1);
                   off = offsets1;
+                  }
               }
               if (header1.bytes==2){ // one byte offsets
+              if (SNAPPY){
+              fseek(f1,initstep1+sizeof(struct D)+header1.dictsize+header1.previndices*2 + header1.minmaxsize,SEEK_SET);
+                   unsigned char offsets1[header1.numofvals];
+   			       char buffer1[header1.indicessize];
+   			       result =  fread(buffer1,header1.indicessize,1,f1);
+    		       string output;
+    		       snappy::Uncompress(buffer1, header1.indicessize, &output);
+    		       copy(&output[0], &output[0]+(sizeof(unsigned char)*header1.numofvals), reinterpret_cast<char*>(offsets1));
+    		       off = offsets1[rowid];
+    		    }
+    		    else{
                   unsigned char offsets1;
                   fseek(f1,initstep1+sizeof(struct D)+header1.dictsize +header1.previndices*2+ header1.minmaxsize+rowid,SEEK_SET);
                   result =  fread(&offsets1,1,1,f1);
                   off = offsets1;
+                  }
               }
                 
         
@@ -3571,23 +3692,48 @@ int random_access_diff(int argc, char * argv[] ){
             initstep2 += current2 + sizeof(int)*(fileheader1.numofcols+1);
             fseek(f1,initstep2, SEEK_SET);
             result =  fread(&header2, sizeof(struct D),1,f1);
-            char buffer1[header2.dictsize];
-            fseek(f1,initstep2+sizeof(struct D)+header2.minmaxsize+ header2.previndices*2,SEEK_SET);
-            result =  fread(buffer1,header2.dictsize,1,f1);
-            msgpack::unpacked result1;
-            unpack(result1, buffer1, header2.dictsize);
+            
             vector<string> values1;
-            result1.get().convert(values1);
+            fseek(f1,initstep2+sizeof(struct D)+header2.minmaxsize+ header2.previndices*2,SEEK_SET);
+            if (SNAPPY){
+   			             char buffer1[header2.dictsize];
+    		             result =  fread(buffer1,header2.dictsize,1,f1);
+    		             string output;
+    		             snappy::Uncompress(buffer1, header2.dictsize, &output);
+    		             msgpack::unpacked result1;
+    		             unpack(result1, output.data(), output.size());
+    		             result1.get().convert(values1);
+    		}
+            else{
+                char buffer1[header2.dictsize];
+            
+                result =  fread(buffer1,header2.dictsize,1,f1);
+                msgpack::unpacked result1;
+                unpack(result1, buffer1, header2.dictsize);
+                result1.get().convert(values1);
+            }
             cout << values1[position_in_block] << endl;
         }
         else {
-            char buffer1[header1.dictsize];
+            
             fseek(f1,initstep1+sizeof(struct D)+header1.minmaxsize+ header1.previndices*2,SEEK_SET);
-            result =  fread(buffer1,header1.dictsize,1,f1);
-            msgpack::unpacked result1;
-            unpack(result1, buffer1, header1.dictsize);
             vector<string> values1;
-            result1.get().convert(values1);
+            if (SNAPPY){
+   			             char buffer1[header1.dictsize];
+    		             result =  fread(buffer1,header1.dictsize,1,f1);
+    		             string output;
+    		             snappy::Uncompress(buffer1, header1.dictsize, &output);
+    		             msgpack::unpacked result1;
+    		             unpack(result1, output.data(), output.size());
+    		             result1.get().convert(values1);
+    		}
+            else{
+                 char buffer1[header1.dictsize];
+                 result =  fread(buffer1,header1.dictsize,1,f1);
+                 msgpack::unpacked result1;
+                 unpack(result1, buffer1, header1.dictsize);
+                 result1.get().convert(values1);
+            }
             cout << values1[position_in_block] << endl;
         }
    // cout <<  position_in_block << " "<< rightblock << endl;
@@ -3597,31 +3743,78 @@ int random_access_diff(int argc, char * argv[] ){
         else if (header1.diff == 1){
             int off;
             if (header1.bytes==1){ // two byte offsets /*read offsets of file 1*/
+            if (SNAPPY){
+            fseek(f1,initstep1+sizeof(struct D)+header1.dictsize+header1.previndices*2 + header1.minmaxsize,SEEK_SET);
+                   unsigned short offsets1[header1.numofvals];
+   			       char buffer1[header1.indicessize];
+   			       result =  fread(buffer1,header1.indicessize,1,f1);
+    		       string output;
+    		       snappy::Uncompress(buffer1, header1.indicessize, &output);
+    		       copy(&output[0], &output[0]+(sizeof(unsigned short)*header1.numofvals), reinterpret_cast<char*>(offsets1));
+    		       off = offsets1[rowid];
+    		    }
+    		    else{
                 unsigned short offsets1;
                 fseek(f1,initstep1+sizeof(struct D)+header1.dictsize+header1.previndices*2 + header1.minmaxsize+rowid*2,SEEK_SET);
                 result =  fread(&offsets1,2,1,f1);
                 off = offsets1;
+                }
             }
             
             if (header1.bytes==0){ // four byte offsets
+            if (SNAPPY){
+            fseek(f1,initstep1+sizeof(struct D)+header1.dictsize+header1.previndices*2 + header1.minmaxsize,SEEK_SET);
+                   unsigned int offsets1[header1.numofvals];
+   			       char buffer1[header1.indicessize];
+   			       result =  fread(buffer1,header1.indicessize,1,f1);
+    		       string output;
+    		       snappy::Uncompress(buffer1, header1.indicessize, &output);
+    		       copy(&output[0], &output[0]+(sizeof(unsigned int)*header1.numofvals), reinterpret_cast<char*>(offsets1));
+    		       off = offsets1[rowid];
+    		    }
+    		    else{
                 unsigned int offsets1;
                 fseek(f1,initstep1+sizeof(struct D)+header1.dictsize +header1.previndices*2+ header1.minmaxsize+rowid*4,SEEK_SET);
                 result =  fread(&offsets1,4,1,f1);
                 off = offsets1;
+                }
             }
             if (header1.bytes==2){ // one byte offsets
+            if (SNAPPY){
+            fseek(f1,initstep1+sizeof(struct D)+header1.dictsize+header1.previndices*2 + header1.minmaxsize,SEEK_SET);
+                   unsigned char offsets1[header1.numofvals];
+   			       char buffer1[header1.indicessize];
+   			       result =  fread(buffer1,header1.indicessize,1,f1);
+    		       string output;
+    		       snappy::Uncompress(buffer1, header1.indicessize, &output);
+    		       copy(&output[0], &output[0]+(sizeof(unsigned char)*header1.numofvals), reinterpret_cast<char*>(offsets1));
+    		       off = offsets1[rowid];
+    		    }
+    		    else{
                 unsigned char offsets1;
                 fseek(f1,initstep1+sizeof(struct D)+header1.dictsize +header1.previndices*2+ header1.minmaxsize+rowid,SEEK_SET);
                 result =  fread(&offsets1,1,1,f1);
                 off = offsets1;
+                }
             }
-            char buffer1[header1.dictsize];
             fseek(f1,initstep1+sizeof(struct D)+header1.minmaxsize+ header1.previndices*2,SEEK_SET);
-            result =  fread(buffer1,header1.dictsize,1,f1);
-            msgpack::unpacked result1;
-            unpack(result1, buffer1, header1.dictsize);
             vector<string> values1;
-            result1.get().convert(values1);
+             if (SNAPPY){
+   			             char buffer1[header1.dictsize];
+    		             result =  fread(buffer1,header1.dictsize,1,f1);
+    		             string output;
+    		             snappy::Uncompress(buffer1, header1.dictsize, &output);
+    		             msgpack::unpacked result1;
+    		             unpack(result1, output.data(), output.size());
+    		             result1.get().convert(values1);
+    		}
+            else{
+                char buffer1[header1.dictsize];
+                result =  fread(buffer1,header1.dictsize,1,f1);
+                msgpack::unpacked result1;
+                unpack(result1, buffer1, header1.dictsize);
+                result1.get().convert(values1);
+            }
             cout << values1[off] << endl;
             
             
@@ -3709,14 +3902,24 @@ int read_diff_filt(int argc, char * argv[] ){
     		 vector<string> minmax1;
     		 minmax.get().convert(minmax1);
     		 vector<string> values1;
-   			 
    			 if (header1.lendiff > 0){
    			   if (header1.diff == 0){
+    	     if (SNAPPY){
+   			  char buffer1[header1.dictsize];
+    		  result =  fread(buffer1,header1.dictsize,1,f1);
+    		  string output;
+    		  snappy::Uncompress(buffer1, header1.dictsize, &output);
+    		  msgpack::unpacked result1;
+    		  unpack(result1, output.data(), output.size());
+    		  result1.get().convert(values1);
+    		}
+    		else {
    			   char buffer1[header1.dictsize];
    			    result =  fread(buffer1,header1.dictsize,1,f1);
     		    msgpack::unpacked result1;
     		    unpack(result1,  buffer1, header1.dictsize);
     		    result1.get().convert(values1);
+    		    }
     		    //cout << values1.front() << " la "<<values1.back() << " la "<<minmax1[0] << " la -" <<minmax1[1]<<endl;
     		    
     		    if (boolminmax_diff)
@@ -3741,11 +3944,22 @@ int read_diff_filt(int argc, char * argv[] ){
    		      	continue;
    		    	}
    		    	else {
+   		    	if (SNAPPY){
+   			  char buffer1[header1.dictsize];
+    		  result =  fread(buffer1,header1.dictsize,1,f1);
+    		  string output;
+    		  snappy::Uncompress(buffer1, header1.dictsize, &output);
+    		  msgpack::unpacked result1;
+    		  unpack(result1, output.data(), output.size());
+    		  result1.get().convert(values1);
+    		}
+    		else {
    		    	char buffer1[header1.dictsize];
    			    result =  fread(buffer1,header1.dictsize,1,f1);
     		    msgpack::unpacked result1;
     		    unpack(result1, buffer1, header1.dictsize);
     		    result1.get().convert(values1);
+    		    }
    		    	}
    		    	}
    		    }
@@ -3769,11 +3983,12 @@ int read_diff_filt(int argc, char * argv[] ){
    			if (!check){
    			 char minmaxbuf[header1.minmaxsize];
    			 fseek(f1,initstep1+sizeof(struct D)+header1.previndices*2, SEEK_SET);
-    		 
     		 result =  fread(minmaxbuf,header1.minmaxsize,1,f1);
     		 msgpack::unpacked minmax;
+    		 
     		 unpack(minmax, minmaxbuf, header1.minmaxsize);
     		 vector<string> minmax1;
+
     		 minmax.get().convert(minmax1);
     		 if (boolminmax)
     		 if (value.compare(minmax1[0])<0 or value.compare(minmax1[1])>0){
@@ -3802,6 +4017,16 @@ int read_diff_filt(int argc, char * argv[] ){
     		if (header1.bytes==1){ // two byte offsets /*read offsets of file 1*/
      			unsigned short offsets1 [header1.numofvals];
      			fseek(f1,initstep1+sizeof(struct D)+header1.dictsize+header1.previndices*2 + header1.minmaxsize,SEEK_SET);
+     			
+     			if (SNAPPY){
+   			       char buffer1[header1.indicessize];
+   			       result =  fread(buffer1,header1.indicessize,1,f1);
+    		       string output;
+    		       snappy::Uncompress(buffer1, header1.indicessize, &output);
+    		       
+    		       copy(&output[0], &output[0]+(sizeof(unsigned short)*header1.numofvals), reinterpret_cast<char*>(offsets1));
+    		    }
+    		    else 
     			result =  fread(offsets1,header1.indicessize,1,f1);
 				for (int i=0; i < header1.numofvals; i++){
      		    
@@ -3818,6 +4043,15 @@ int read_diff_filt(int argc, char * argv[] ){
      		if (header1.bytes==0){ // four byte offsets
      			unsigned int offsets1 [header1.numofvals];
      			fseek(f1,initstep1+sizeof(struct D)+header1.dictsize +header1.previndices*2+ header1.minmaxsize,SEEK_SET);
+     			if (SNAPPY){
+   			       char buffer1[header1.indicessize];
+   			       result =  fread(buffer1,header1.indicessize,1,f1);
+    		       string output;
+    		       snappy::Uncompress(buffer1, header1.indicessize, &output);
+    		       
+    		       copy(&output[0], &output[0]+(sizeof(unsigned int)*header1.numofvals), reinterpret_cast<char*>(offsets1));
+    		    }
+    		    else 
     			result =  fread(offsets1,header1.indicessize,1,f1);
 				for (int i=0; i < header1.numofvals; i++){
      		    
@@ -3834,6 +4068,15 @@ int read_diff_filt(int argc, char * argv[] ){
      		if (header1.bytes==2){ // one byte offsets
      			unsigned char offsets1 [header1.numofvals];
      			fseek(f1,initstep1+sizeof(struct D)+header1.dictsize +header1.previndices*2+ header1.minmaxsize,SEEK_SET);
+     			if (SNAPPY){
+   			       char buffer1[header1.indicessize];
+   			       result =  fread(buffer1,header1.indicessize,1,f1);
+    		       string output;
+    		       snappy::Uncompress(buffer1, header1.indicessize, &output);
+    		       
+    		       copy(&output[0], &output[0]+(sizeof(unsigned char)*header1.numofvals), reinterpret_cast<char*>(offsets1));
+    		    }
+    		    else 
     			result =  fread(offsets1,header1.indicessize,1,f1);
      			for (int i=0; i < header1.numofvals; i++){
      		    
@@ -4427,12 +4670,24 @@ int read_diff_range(int argc, char * argv[] ){
    			
    			 if (header1.lendiff > 0){
    			   if (header1.diff == 0){
+   			   
+   			if (SNAPPY){
+   			  char buffer1[header1.dictsize];
+    		  result =  fread(buffer1,header1.dictsize,1,f1);
+    		  string output;
+    		  snappy::Uncompress(buffer1, header1.dictsize, &output);
+    		  msgpack::unpacked result1;
+    		  unpack(result1, output.data(), output.size());
+    		  result1.get().convert(values1);
+    		}
+    		else {
+   			   
    			   char buffer1[header1.dictsize];
    			    result =  fread(buffer1,header1.dictsize,1,f1);
     		    msgpack::unpacked result1;
     		    unpack(result1, buffer1, header1.dictsize);
     		    result1.get().convert(values1);
-    		    
+    		    }
    		    	}
    		    else {
    		        
@@ -4444,7 +4699,16 @@ int read_diff_range(int argc, char * argv[] ){
    		      	continue;
    		    	}
    		    	else {
-   		    	
+   		    	 if (SNAPPY){
+   			       char buffer1[header1.dictsize];
+    		       result =  fread(buffer1,header1.dictsize,1,f1);
+    		       string output;
+    		       snappy::Uncompress(buffer1, header1.dictsize, &output);
+    		       msgpack::unpacked result1;
+    		       unpack(result1, output.data(), output.size());
+    		       result1.get().convert(values1);
+    		}
+    		else {
    		    	char buffer1[header1.dictsize];
    			    result =  fread(buffer1,header1.dictsize,1,f1);
     		    msgpack::unpacked result1;
@@ -4452,6 +4716,7 @@ int read_diff_range(int argc, char * argv[] ){
     		    result1.get().convert(values1);
    		    	}
    		    	}
+   		    }
    		    }
    		    
    		  /* if (values1.size()<10){
@@ -4616,6 +4881,15 @@ int read_diff_range(int argc, char * argv[] ){
     		if (header1.bytes==1){ // two byte offsets /*read offsets of file 1*/
      			unsigned short offsets1 [header1.numofvals];
      			fseek(f1,initstep1+sizeof(struct D)+header1.previndices*2+header1.dictsize + header1.minmaxsize,SEEK_SET);
+     			if (SNAPPY){
+   			       char buffer1[header1.indicessize];
+   			       result =  fread(buffer1,header1.indicessize,1,f1);
+    		       string output;
+    		       snappy::Uncompress(buffer1, header1.indicessize, &output);
+    		       
+    		       copy(&output[0], &output[0]+(sizeof(unsigned short)*header1.numofvals), reinterpret_cast<char*>(offsets1));
+    		    }
+    		    else 
     			result =  fread(offsets1,header1.indicessize,1,f1);
 				if (op == ">")
 				for (int i=0; i < header1.numofvals; i++){
@@ -4642,6 +4916,15 @@ int read_diff_range(int argc, char * argv[] ){
      		if (header1.bytes==0){ // four byte offsets
      			unsigned int offsets1 [header1.numofvals];
      			fseek(f1,initstep1+sizeof(struct D)+header1.previndices*2+header1.dictsize + header1.minmaxsize,SEEK_SET);
+     			if (SNAPPY){
+   			       char buffer1[header1.indicessize];
+   			       result =  fread(buffer1,header1.indicessize,1,f1);
+    		       string output;
+    		       snappy::Uncompress(buffer1, header1.indicessize, &output);
+    		       
+    		       copy(&output[0], &output[0]+(sizeof(unsigned int)*header1.numofvals), reinterpret_cast<char*>(offsets1));
+    		    }
+    		    else 
     			result =  fread(offsets1,header1.indicessize,1,f1);
     			if (op == ">")
 				for (int i=0; i < header1.numofvals; i++){
@@ -4668,6 +4951,15 @@ int read_diff_range(int argc, char * argv[] ){
      		if (header1.bytes==2){ // one byte offsets
      			unsigned char offsets1 [header1.numofvals];
      			fseek(f1,initstep1+sizeof(struct D)+header1.previndices*2+header1.dictsize + header1.minmaxsize,SEEK_SET);
+     			if (SNAPPY){
+   			       char buffer1[header1.indicessize];
+   			       result =  fread(buffer1,header1.indicessize,1,f1);
+    		       string output;
+    		       snappy::Uncompress(buffer1, header1.indicessize, &output);
+    		       
+    		       copy(&output[0], &output[0]+(sizeof(unsigned char)*header1.numofvals), reinterpret_cast<char*>(offsets1));
+    		    }
+    		    else 
     			result =  fread(offsets1,header1.indicessize,1,f1);
      			if (op == ">")
 				for (int i=0; i < header1.numofvals; i++){
@@ -4755,6 +5047,15 @@ int read_diff_range(int argc, char * argv[] ){
     		if (header1.bytes==1){ // two byte offsets /*read offsets of file 1*/
      			unsigned short offsets1 [header1.numofvals];
      			fseek(f1,initstep1+sizeof(struct D)+header1.previndices*2+header1.dictsize + header1.minmaxsize,SEEK_SET);
+     			if (SNAPPY){
+   			       char buffer1[header1.indicessize];
+   			       result =  fread(buffer1,header1.indicessize,1,f1);
+    		       string output;
+    		       snappy::Uncompress(buffer1, header1.indicessize, &output);
+    		       
+    		       copy(&output[0], &output[0]+(sizeof(unsigned short)*header1.numofvals), reinterpret_cast<char*>(offsets1));
+    		    }
+    		    else 
     			result =  fread(offsets1,header1.indicessize,1,f1);
     			if (op == ">")
 				    for (int i=0; i < header1.numofvals; i++){
@@ -4791,6 +5092,15 @@ int read_diff_range(int argc, char * argv[] ){
      		if (header1.bytes==0){ // four byte offsets
      			unsigned int offsets1 [header1.numofvals];
      			fseek(f1,initstep1+sizeof(struct D)+header1.previndices*2+header1.dictsize + header1.minmaxsize,SEEK_SET);
+     			if (SNAPPY){
+   			       char buffer1[header1.indicessize];
+   			       result =  fread(buffer1,header1.indicessize,1,f1);
+    		       string output;
+    		       snappy::Uncompress(buffer1, header1.indicessize, &output);
+    		       
+    		       copy(&output[0], &output[0]+(sizeof(unsigned int)*header1.numofvals), reinterpret_cast<char*>(offsets1));
+    		    }
+    		    else 
     			result =  fread(offsets1,header1.indicessize,1,f1);
 				if (op == ">")
 				    for (int i=0; i < header1.numofvals; i++){
@@ -4827,6 +5137,15 @@ int read_diff_range(int argc, char * argv[] ){
      		if (header1.bytes==2){ // one byte offsets
      			unsigned char offsets1 [header1.numofvals];
      			fseek(f1,initstep1+sizeof(struct D)+header1.previndices*2+header1.dictsize + header1.minmaxsize,SEEK_SET);
+     			if (SNAPPY){
+   			       char buffer1[header1.indicessize];
+   			       result =  fread(buffer1,header1.indicessize,1,f1);
+    		       string output;
+    		       snappy::Uncompress(buffer1, header1.indicessize, &output);
+    		       
+    		       copy(&output[0], &output[0]+(sizeof(unsigned char)*header1.numofvals), reinterpret_cast<char*>(offsets1));
+    		    }
+    		    else 
     			result =  fread(offsets1,header1.indicessize,1,f1);
      			if (op == ">")
 				    for (int i=0; i < header1.numofvals; i++){
@@ -5281,6 +5600,8 @@ int read_parquet_filt(int argc, char * argv[]){
 }
 
 int main(int argc, char * argv[] ){
+  if (strstr(argv[1], "snappy"))
+      SNAPPY = 1;
   if (argc == 3){
       if (strstr(argv[1], "diff"))
          return read_diff_materialize(argc,argv);
