@@ -79,14 +79,6 @@ The above Python implementation is more complete and works also with dataframes 
 
 <br>
 
-Local dictionaries are not implemented alone. If someone wants to encode with local dictionaries in python's implementation in file fastparquet/writer.py before line 682 a hard coded `diffdict = 0` statement should be added.
-In C++ implementation in compress.cpp file the same should be added before line 136. Doing this the cost function can be disabled.
-Also commenting lines 91-134 in C++ and 643-671 in python will remove the cost function calculations and its overheads. 
-With `diffdict = 1` it is possible to run it without the cost function using only differential encoding.
-
-The datasets used in the experiments are too big and could not be included in this repo. However, the data used is accessible through the links provided in the footnote of the paper and the exact datasets are reproducible either directly or given the explanations in the paper. 
-
-
 
 
 
