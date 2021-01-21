@@ -1,5 +1,3 @@
-# sigmod2021
-
 <b>Compile readdiff.cpp</b>: <br>
 g++ -std=c++11 -o read readdiff.cpp -lorc -lzstd -lprotobuf -lsnappy -llz4 -lz -lprotoc -lpthread -lparquet <br>
 
