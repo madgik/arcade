@@ -20,10 +20,8 @@
 #include <string>
 #include <fstream>
 
-
-  
 using namespace std;
-
+int BLOCKSIZE = 65535;
 struct D {
     int dictsize;
     int indicessize;
@@ -46,18 +44,38 @@ struct rec {
      int val;
 };
 
+static char gDelimiter = ',';
+// extract one column raw text from one line
 
-int BLOCKSIZE = 65535;
-int COLNUM = 1;
+vector <int> extractattributes(std::string s) {
+  vector <int> columns;
+  string parsed;
+  stringstream input_stringstream(s);
+  
+  while (getline(input_stringstream,parsed,',')){
+     cout << parsed << endl;
+     columns.push_back(stoi(parsed));
+}  
+  return columns;
+}
 
-double duration1; 
-
-vector <int> sizediff;
-vector <string> globaldict;
-vector <string> glob;
-unordered_map<string, size_t> lookup;
-vector <short> diffvals;
-
+vector<std::string> extractColumn(vector<std::string> dataset, uint64_t colIndex) {
+  vector<std::string> column(dataset.size());
+  for (int i=0; i < dataset.size(); i++){
+      	uint64_t col = 0;
+  		size_t start = 0;
+  		size_t end = dataset[i].find(gDelimiter);
+  		while (col < colIndex && end != std::string::npos) {
+    		start = end + 1;
+    		end = dataset[i].find(gDelimiter, start);
+    		if (end == std::string::npos)
+    		    end = dataset[i].size()-1;
+    		++col;
+  		}
+  		column[i] = (col == colIndex ? dataset[i].substr(start, end - start) : "");
+  }
+  return column;
+}
 
 
 vector <string> slice( vector <string>  const &v, int m, int n)
@@ -65,8 +83,8 @@ vector <string> slice( vector <string>  const &v, int m, int n)
     return std::vector<string>(v.begin() + m, v.begin()+n+1);
 }
 
-
-int compress(vector <string> vals, FILE *f1){
+	
+int compress(vector <string> vals, FILE *f1,vector <int> &sizediff, vector <string> &globaldict, vector <string> &glob, unordered_map<string, size_t> &lookup, vector <short> &diffvals){
     struct D header;
     header.numofvals = vals.size();
     vector <string> minmax(2);
@@ -129,7 +147,6 @@ int compress(vector <string> vals, FILE *f1){
             diffdict = 0;
         else if (diffcount*(diffs - locs) + diffcount*(diffdictdump-diffavg) - (sizelocal - sizeofdiff) > 0)
             diffdict = 0;
-    
     }
     
     
@@ -297,71 +314,100 @@ else if (diffdict == 0){
 }
 
 
+
 int main(int argc, char** argv)
 {
-   
+    string attributes = argv[4];
+    vector <int> mcolumns = extractattributes(attributes);
+	int COLNUM = mcolumns.size();
+	cout << mcolumns.size() << endl;
+	vector<vector <int>> sizediff(COLNUM);
+	vector<vector <string>> globaldict(COLNUM);
+	vector<vector <string>> glob(COLNUM);
+	vector<unordered_map<string, size_t>> lookup(COLNUM);
+	vector<vector <short>> diffvals(COLNUM);
+
+    int blocknum = 0;
+    std::string input;
+    input = argv[1];
     std::clock_t start;
     double duration;
     start = std::clock();
-    std::ifstream infile(argv[1]);
+    std::ifstream finput(input.c_str());
     
     FILE *f1;
     int columnindexes[COLNUM+1];
     memset( columnindexes, 0, COLNUM+1*sizeof(int) );
     f1 = fopen(argv[2],"wb");
 
-    vector<string> dataset;
-   for( std::string line; getline( infile, line ); ){
-        line.erase(line.length()-1);
-        dataset.push_back(line);
-        }
-        
-        
+  /*init output file headers*/
+  fwrite("DIFF",4,1,f1);
+  long ft = ftell(f1);
+  struct fileH fileheader1;
+  fileheader1.numofcols = COLNUM;
+  fileheader1.numofvals = atoi(argv[3]);
+  fileheader1.numofblocks = ceil(fileheader1.numofvals*1.0/BLOCKSIZE);
+  cout << fileheader1.numofblocks << endl;
+  fwrite(&fileheader1, sizeof(fileheader1), 1, f1);
+  long blocksizes[fileheader1.numofblocks];
+  
+  
+  
+  fwrite(blocksizes, (fileheader1.numofblocks)*sizeof(long), 1, f1);
+  
+  bool eof = false;
+  string line;
+  vector<string> dataset; // buffer that holds a batch of rows in raw text
+  
+  int num_of_vals1 = 0;
+  
+  while (!eof) {
+    int numValues = 0;      // num of lines read in a batch
+
+    dataset.clear();
+    // read a batch of lines from the input file
+    for (int i = 0; i < BLOCKSIZE; ++i) {
+      if (!std::getline(finput, line) or num_of_vals1 >= fileheader1.numofvals) {
+        eof = true;
+        break;
+      }
+      dataset.push_back(line);  
+      ++numValues;
+      num_of_vals1++;      
+    }
+    /*compress batch*/
+    long tell_init = ftell(f1);
+    for (int k = 0; k < COLNUM+1; k++)
+        fwrite(&columnindexes[k],sizeof(int),1,f1);
+    long tell = ftell(f1);
+           
+    for (int j = 0; j < COLNUM; j++){
+               long tell1 = ftell(f1);
+               //compress(dataset, f1, sizediff[j], globaldict[j], glob[j], lookup[j], diffvals[j]);
+               compress(extractColumn(dataset,mcolumns[j]), f1, sizediff[j], globaldict[j], glob[j], lookup[j], diffvals[j]); 
+               //compress(slice(dataset,0,dataset.size()-1),f1);
+               columnindexes[j] = tell1-tell;
+    }
+    long tell_end = ftell(f1);
+    columnindexes[COLNUM] = tell_end - tell;
+    fseek(f1,tell_init,SEEK_SET);
+    for (int k = 0; k < COLNUM+1; k++)
+        fwrite(&columnindexes[k],sizeof(int),1,f1);
     
+    
+    fseek(f1,tell_end,SEEK_SET);       
+    blocksizes[blocknum] = tell_init;    
+    blocknum++;
+}
+         
     duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
 
     std::cout<<"csv import time: "<< duration <<'\n';
     
-    fwrite("DIFF",4,1,f1);
-    struct fileH fileheader1;
-    fileheader1.numofcols = COLNUM;
-    fileheader1.numofvals = dataset.size();
+    fseek(f1,ft,SEEK_SET);
+    fileheader1.numofvals = num_of_vals1;
     fileheader1.numofblocks = ceil(fileheader1.numofvals*1.0/BLOCKSIZE);
     fwrite(&fileheader1, sizeof(fileheader1), 1, f1);
-    long blocksizes[fileheader1.numofblocks];
-    long ft = ftell(f1);
-    fwrite(blocksizes, (fileheader1.numofblocks)*sizeof(long), 1, f1);
-
-       int i = 0;
-       for (i=0; i < fileheader1.numofvals/BLOCKSIZE; i++){
-           long tell_init = ftell(f1);
-           for (int k = 0; k < COLNUM+1; k++)
-             fwrite(&columnindexes[k],sizeof(int),1,f1);
-           long tell = ftell(f1);
-           
-           
-           for (int j = 0; j < COLNUM; j++){
-               long tell1 = ftell(f1);
-               compress(slice(dataset,i*BLOCKSIZE,i*BLOCKSIZE+BLOCKSIZE-1),f1);
-               columnindexes[j] = tell1-tell;
-           }
-           long tell_end = ftell(f1);
-           columnindexes[COLNUM] = tell_end - tell;
-           fseek(f1,tell_init,SEEK_SET);
-           for (int k = 0; k < COLNUM+1; k++)
-             fwrite(&columnindexes[k],sizeof(int),1,f1);
-           fseek(f1,tell_end,SEEK_SET);
-           
-           blocksizes[i] = tell_init;
-       }
-           
-       long tell = ftell(f1);
-       for (int k = 0; k < COLNUM+1; k++)
-           fwrite(&columnindexes[k],sizeof(int),1,f1);
-       for (int j = 0; j < COLNUM; j++)
-           compress(slice(dataset,i*BLOCKSIZE,fileheader1.numofvals-1),f1);
-      
-    fseek(f1,ft,SEEK_SET);
     blocksizes[fileheader1.numofblocks-1] = BLOCKSIZE;
     fwrite(blocksizes, (fileheader1.numofblocks)*sizeof(long), 1, f1);
     return (0);

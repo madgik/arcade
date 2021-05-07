@@ -19,9 +19,6 @@
 
 
 #include "snappy.h"
-#include "orc/ColumnPrinter.hh"
-
-#include "orc/Exceptions.hh"
 
 #include <getopt.h>
 #include <string>
@@ -325,7 +322,7 @@ int read_diff_materialize(int argc, char * argv[] ){
 		}
 	}
 
-    cout << count << " " << column[10000000]<< endl;
+    cout << count << " " << endl;
     fclose(f1);
     return 0; 
 
