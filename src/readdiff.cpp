@@ -168,17 +168,16 @@ int read_diff_materialize(int argc, char * argv[] ){
    		    memcpy(&header1,&fptr1[initstep1], sizeof(struct D));
    //		    cout << header1.dictsize << " "<< header1.indicessize <<" "<< header1.numofvals << " "<< header1.minmaxsize << " "<< header1.bytes <<endl;
        
-   		    
    		    if (header1.dictsize == 0){
    		        if (totalcount1 == 0)
    		            parquetvalues1.reserve(fileheader1.numofvals);
     		    char buffer1[header1.indicessize];
-
     			memcpy(buffer1,&fptr1[initstep1+sizeof(struct D)],header1.indicessize);
     			msgpack::unpacked result1;
     			unpack(result1, buffer1, header1.indicessize);
     			vector<string> values1;
     			result1.get().convert(values1);
+    			count += values1.size();
     			parquetvalues1.insert( parquetvalues1.end(), values1.begin(), values1.end() );
    				totalcount1 += header1.numofvals;
    				initstep1 += next-current;
@@ -371,6 +370,7 @@ int read_diff(int argc, char * argv[] ){
    		    memcpy(&header1,&fptr1[initstep1], sizeof(struct D));
    		    
    		    if (header1.dictsize == 0){
+   		        
    		        if (totalcount1 == 0)
    		            parquetvalues1.reserve(fileheader1.numofvals);
     		    char buffer1[header1.indicessize];
@@ -858,12 +858,17 @@ int read_diff_filt(int argc, char * argv[] ){
    		        if (totalcount1 == 0)
    		            parquetvalues1.reserve(fileheader1.numofvals);
     		    char buffer1[header1.indicessize];
-    		    fseek(f1,initstep1+sizeof(struct D)+header1.previndices*2, SEEK_SET);
+    		    //fseek(f1,initstep1+sizeof(struct D)+header1.previndices*2, SEEK_SET);
     			result =  fread(buffer1,header1.indicessize,1,f1);
     			msgpack::unpacked result1;
+    			
     			unpack(result1, buffer1, header1.indicessize);
     			vector<string> values1;
     			result1.get().convert(values1);
+    			count += values1.size();
+    			for(string i : values1) 
+                    if (i == value)
+                      fcount++;
     			parquetvalues1.insert( parquetvalues1.end(), values1.begin(), values1.end() );
    				//totalcount1 += header1.numofvals;
    				initstep1 += next-current;
@@ -1133,6 +1138,7 @@ int read_diff_range(int argc, char * argv[] ){
     			msgpack::unpacked result1;
     			unpack(result1, buffer1, header1.indicessize);
     			vector<string> values1;
+    			count += values1.size();
     			result1.get().convert(values1);
     			parquetvalues1.insert( parquetvalues1.end(), values1.begin(), values1.end() );
    				totalcount1 += header1.numofvals;
@@ -1321,8 +1327,6 @@ int read_diff_range(int argc, char * argv[] ){
              }
    			}
    			
-   			
-             
         if (header1.diff == 1){
    			 char minmaxbuf[header1.minmaxsize];
    			 fseek(f1,initstep1+sizeof(struct D)+header1.previndices*2, SEEK_SET);
@@ -1338,7 +1342,6 @@ int read_diff_range(int argc, char * argv[] ){
 
     		     continue;
     		 }
-   			
    			
    			 if (header1.indicessize == 4){
                 int offf;
@@ -1525,12 +1528,7 @@ int read_diff_range(int argc, char * argv[] ){
         				}
         				count++;
         					}
-            					
-    
-     		    
-     		
      			initstep1 += next - current;
-            
             }
             else{
    			

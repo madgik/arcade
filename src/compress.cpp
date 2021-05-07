@@ -84,7 +84,7 @@ vector <string> slice( vector <string>  const &v, int m, int n)
 }
 
 	
-int compress(vector <string> vals, FILE *f1,vector <int> &sizediff, vector <string> &globaldict, vector <string> &glob, unordered_map<string, size_t> &lookup, vector <short> &diffvals){
+int compress(vector <string> vals, FILE *f1, bool &isdictionary, vector <int> &sizediff, vector <string> &globaldict, vector <string> &glob, unordered_map<string, size_t> &lookup, vector <short> &diffvals){
     struct D header;
     header.numofvals = vals.size();
     vector <string> minmax(2);
@@ -97,11 +97,41 @@ int compress(vector <string> vals, FILE *f1,vector <int> &sizediff, vector <stri
     sort( vec.begin(), vec.end() );
     vector<string> diff;
     int ll = vec.size();
+    
     minmax[0] = vec[0];
     minmax[1] = vec[ll-1];
     //std::vector<string> glob = globaldict;
     //std::sort(glob.begin(), glob.end());
+    if (vec.size()*1.0/vals.size()>0.3){
+            isdictionary = false;
+            header.dictsize = 0;
     
+            globaldict.clear();
+    		glob.clear();
+    		sizediff.clear();
+    		diffvals.clear();
+    		lookup.clear();
+
+    
+    		std::stringstream buffermm;
+    		msgpack::pack(buffermm, minmax);
+    		string stmm = buffermm.str();
+    		header.minmaxsize = 0;//stmm.size();
+
+    
+    		std::stringstream buffer;
+    		msgpack::pack(buffer, vals);
+    		string st = buffer.str();
+            header.indicessize = st.size();
+    		header.lendiff = 0;
+
+        	header.bytes = 0;
+        	fwrite(&header, sizeof(header), 1, f1);
+        	//fwrite(&stmm[0], header.minmaxsize ,1 , f1 );
+        	fwrite(&st[0], header.indicessize ,1 , f1 );
+    
+    		
+    }
     set_difference(vec.begin(), vec.end(), glob.begin(), glob.end(), std::inserter(diff, diff.begin()));
     
     int diffdict = 1;
@@ -320,12 +350,12 @@ int main(int argc, char** argv)
     string attributes = argv[4];
     vector <int> mcolumns = extractattributes(attributes);
 	int COLNUM = mcolumns.size();
-	cout << mcolumns.size() << endl;
 	vector<vector <int>> sizediff(COLNUM);
 	vector<vector <string>> globaldict(COLNUM);
 	vector<vector <string>> glob(COLNUM);
 	vector<unordered_map<string, size_t>> lookup(COLNUM);
 	vector<vector <short>> diffvals(COLNUM);
+	bool isdictionary = true;
 
     int blocknum = 0;
     std::string input;
@@ -384,7 +414,8 @@ int main(int argc, char** argv)
     for (int j = 0; j < COLNUM; j++){
                long tell1 = ftell(f1);
                //compress(dataset, f1, sizediff[j], globaldict[j], glob[j], lookup[j], diffvals[j]);
-               compress(extractColumn(dataset,mcolumns[j]), f1, sizediff[j], globaldict[j], glob[j], lookup[j], diffvals[j]); 
+               compress(extractColumn(dataset,mcolumns[j]), f1, isdictionary, sizediff[j], globaldict[j], glob[j], lookup[j], diffvals[j]); 
+               cout << isdictionary << endl;
                //compress(slice(dataset,0,dataset.size()-1),f1);
                columnindexes[j] = tell1-tell;
     }
