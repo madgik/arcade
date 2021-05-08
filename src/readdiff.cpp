@@ -560,13 +560,10 @@ int random_access_diff(int argc, char * argv[] ){
         result =  fread(&header1, sizeof(struct D),1,f1);
         unsigned short int previndex[header1.previndices];
         result =  fread(previndex, header1.previndices * 2, 1, f1);
-
-   
-        
+    
         if (header1.dictsize == 0){
                     vector<string> values1;
                     char buffer1[header1.indicessize];
-                    fseek(f1,initstep1+sizeof(struct D)+header1.previndices*2, SEEK_SET);
                     result =  fread(buffer1,header1.indicessize,1,f1);
                     msgpack::unpacked result1;
                     unpack(result1, buffer1, header1.indicessize);
@@ -576,6 +573,7 @@ int random_access_diff(int argc, char * argv[] ){
                 
         }
         else if (header1.diff == 0){
+            
             int off;
               if (header1.bytes==1){ // two byte offsets /*read offsets of file 1*/
               if (SNAPPY){
@@ -1133,20 +1131,23 @@ int read_diff_range(int argc, char * argv[] ){
    		        if (totalcount1 == 0)
    		            parquetvalues1.reserve(fileheader1.numofvals);
     		    char buffer1[header1.indicessize];
-    		    fseek(f1,initstep1+sizeof(struct D)+header1.previndices*2, SEEK_SET);
+    		    //fseek(f1,initstep1+sizeof(struct D)+header1.previndices*2, SEEK_SET);
     			result =  fread(buffer1,header1.indicessize,1,f1);
     			msgpack::unpacked result1;
     			unpack(result1, buffer1, header1.indicessize);
     			vector<string> values1;
-    			count += values1.size();
     			result1.get().convert(values1);
-    			parquetvalues1.insert( parquetvalues1.end(), values1.begin(), values1.end() );
-   				totalcount1 += header1.numofvals;
+    			for (string i : values1){
+    			  
+    			  if ((op == ">" and value.compare(i)<0) or (op == "<" and value.compare(i)>0)){
+    			    col[fcount] = count;
+     		        fcount++;
+     		      }
+     		      count++;
+    			}
    				initstep1 += next-current;
     		}
     		else {
-    		
-
     		if (header1.diff == 1){
     		 global_len = 0;
     		 predicate.clear();
@@ -1305,8 +1306,6 @@ int read_diff_range(int argc, char * argv[] ){
    			 
    			 }
    		     
-   			    
-   			   
    			    offset = -1;
    			   
    			 }
@@ -1671,7 +1670,7 @@ int read_diff_range(int argc, char * argv[] ){
 		}
 	}
 
-    cout << fcount*1.0/count*1.0 << endl;
+    cout << fcount << "  " << count << " " << fcount*1.0/count*1.0 << endl;
     fclose(f1);
     return 0;
 }

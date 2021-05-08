@@ -102,10 +102,10 @@ int compress(vector <string> vals, FILE *f1, bool &isdictionary, vector <int> &s
     minmax[1] = vec[ll-1];
     //std::vector<string> glob = globaldict;
     //std::sort(glob.begin(), glob.end());
-    if (vec.size()*1.0/vals.size()>0.3){
+    if (vec.size()*1.0/vals.size()>0.8){
             isdictionary = false;
             header.dictsize = 0;
-    
+            header.previndices = 0;
             globaldict.clear();
     		glob.clear();
     		sizediff.clear();
