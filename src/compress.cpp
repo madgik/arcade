@@ -84,7 +84,7 @@ vector <string> slice( vector <string>  const &v, int m, int n)
 }
 
 	
-int compress(vector <string> vals, FILE *f1, bool &isdictionary, vector <int> &sizediff, vector <string> &globaldict, vector <string> &glob, unordered_map<string, size_t> &lookup, vector <short> &diffvals){
+int compress_batch(vector <string> vals, FILE *f1, bool &isdictionary, vector <int> &sizediff, vector <string> &globaldict, vector <string> &glob, unordered_map<string, size_t> &lookup, vector <short> &diffvals){
     struct D header;
     header.numofvals = vals.size();
     vector <string> minmax(2);
@@ -345,9 +345,8 @@ else if (diffdict == 0){
 
 
 
-int main(int argc, char** argv)
-{
-    string attributes = argv[4];
+
+int compress(char* infile, char* outfile, int numofvals, char* attributes){
     vector <int> mcolumns = extractattributes(attributes);
 	int COLNUM = mcolumns.size();
 	vector<vector <int>> sizediff(COLNUM);
@@ -359,7 +358,7 @@ int main(int argc, char** argv)
 
     int blocknum = 0;
     std::string input;
-    input = argv[1];
+    input = infile;
     std::clock_t start;
     double duration;
     start = std::clock();
@@ -368,14 +367,14 @@ int main(int argc, char** argv)
     FILE *f1;
     int columnindexes[COLNUM+1];
     memset( columnindexes, 0, COLNUM+1*sizeof(int) );
-    f1 = fopen(argv[2],"wb");
+    f1 = fopen(outfile,"wb");
 
   /*init output file headers*/
   fwrite("DIFF",4,1,f1);
   long ft = ftell(f1);
   struct fileH fileheader1;
   fileheader1.numofcols = COLNUM;
-  fileheader1.numofvals = atoi(argv[3]);
+  fileheader1.numofvals = numofvals;
   fileheader1.numofblocks = ceil(fileheader1.numofvals*1.0/BLOCKSIZE);
   cout << fileheader1.numofblocks << endl;
   fwrite(&fileheader1, sizeof(fileheader1), 1, f1);
@@ -414,7 +413,7 @@ int main(int argc, char** argv)
     for (int j = 0; j < COLNUM; j++){
                long tell1 = ftell(f1);
                //compress(dataset, f1, sizediff[j], globaldict[j], glob[j], lookup[j], diffvals[j]);
-               compress(extractColumn(dataset,mcolumns[j]), f1, isdictionary, sizediff[j], globaldict[j], glob[j], lookup[j], diffvals[j]); 
+               compress_batch(extractColumn(dataset,mcolumns[j]), f1, isdictionary, sizediff[j], globaldict[j], glob[j], lookup[j], diffvals[j]); 
                cout << isdictionary << endl;
                //compress(slice(dataset,0,dataset.size()-1),f1);
                columnindexes[j] = tell1-tell;
@@ -442,4 +441,13 @@ int main(int argc, char** argv)
     blocksizes[fileheader1.numofblocks-1] = BLOCKSIZE;
     fwrite(blocksizes, (fileheader1.numofblocks)*sizeof(long), 1, f1);
     return (0);
+}
+
+int main(int argc, char** argv)
+{
+    if (argc != 5){
+        cout << "wrong input" << endl;
+    }
+    /*TODO check input*/
+    return compress(argv[1], argv[2], atoi(argv[3]), argv[4]);
 }
