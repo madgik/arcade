@@ -321,7 +321,7 @@ int read_diff_materialize(int argc, char * argv[] ){
 		}
 	}
 
-    cout << count << " " << endl;
+    cout << count << " " << column[50000000]<< endl;
     fclose(f1);
     return 0; 
 
@@ -691,7 +691,7 @@ int random_access_diff(int argc, char * argv[] ){
                 unpack(result1, buffer1, header2.dictsize);
                 result1.get().convert(values1);
             }
-            cout << values1[position_in_block] << endl;
+            cout << values1[position_in_block] << "lala" << endl;
         }
         else {
             
@@ -713,7 +713,7 @@ int random_access_diff(int argc, char * argv[] ){
                  unpack(result1, buffer1, header1.dictsize);
                  result1.get().convert(values1);
             }
-            cout << values1[position_in_block] << endl;
+            cout << values1[position_in_block] << "lala"  << endl;
         }
    // cout <<  position_in_block << " "<< rightblock << endl;
         
@@ -795,6 +795,7 @@ int random_access_diff(int argc, char * argv[] ){
                 result1.get().convert(values1);
             }
             cout << values1[off] << endl;
+            cout << values1[off].size() << endl;
             
             
         }
