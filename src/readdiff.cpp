@@ -337,7 +337,7 @@ int read_diff(int argc, char * argv[] ){
     /*load file 1 in memory*/
     fseek(f1, 0, SEEK_END);
     long fsize1 = ftell(f1);
-    fseek(f1, 0, SEEK_SET);  
+    fseek(f1, 0, SEEK_SET);
     char *fptr1 = (char*)malloc(fsize1 + 1);
     result =  fread(fptr1, 1, fsize1, f1);
     fclose(f1);
@@ -570,12 +570,10 @@ int random_access_diff(int argc, char * argv[] ){
                     result1.get().convert(values1);
                     cout << values1[rowid] << endl;
                     return 1;
-                
         }
         else if (header1.diff == 0){
-            
             int off;
-              if (header1.bytes==1){ // two byte offsets /*read offsets of file 1*/
+            if (header1.bytes==1){ // two byte offsets /*read offsets of file 1*/
               if (SNAPPY){
                   fseek(f1,initstep1+sizeof(struct D)+header1.dictsize+header1.previndices*2 + header1.minmaxsize,SEEK_SET);
                    unsigned short offsets1[header1.numofvals];
@@ -806,6 +804,15 @@ int random_access_diff(int argc, char * argv[] ){
 
 
 
+auto get_column_value(FILE *f1, struct fileH fileheader1, struct D header1, vector <int> columns, vector <int> rowids){
+/*
+TODO gets list with row ids and returns the values from the other columns
+Several trade-offs and optimisation opportunities
+*/
+return 0;
+}
+
+
 
 int read_diff_filt(int argc, char * argv[] ){
     int ommits = 0;
@@ -846,7 +853,7 @@ int read_diff_filt(int argc, char * argv[] ){
  	   
    		    int current, next;
    		    fseek(f1, initstep1 + sizeof(int)*join1, SEEK_SET);
-   		    result =  fread(&current,sizeof(int),1,f1);
+   		    result = fread(&current,sizeof(int),1,f1);
    		    fseek(f1, initstep1 + sizeof(int)*(fileheader1.numofcols), SEEK_SET);
    		    result =  fread(&next,sizeof(int),1,f1);
             initstep1 += current + sizeof(int)*(fileheader1.numofcols+1);
