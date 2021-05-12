@@ -637,9 +637,9 @@ int random_access_diff(int argc, char * argv[] ){
     int rightblock = 0;
     int found = 0;
     int position_in_block;
+    int reelative_block_num = 0;
 
     for (int co = 1; co<=header1.previndices; co+=2){
-       
         prevtemp = temp;
         temp += previndex[co];
 
@@ -652,6 +652,7 @@ int random_access_diff(int argc, char * argv[] ){
             break;
         }
     }
+      
         if (header1.previndices == 0){ //i am in the first block
                 found = 1;
                 position_in_block = off;
@@ -661,7 +662,7 @@ int random_access_diff(int argc, char * argv[] ){
             position_in_block = off - temp;
             rightblock = blocknum;
         }
-            
+        
         if (blocknum != rightblock){
             unsigned long initstep2 = data[rightblock];
             struct D header2;
@@ -691,7 +692,8 @@ int random_access_diff(int argc, char * argv[] ){
                 unpack(result1, buffer1, header2.dictsize);
                 result1.get().convert(values1);
             }
-            cout << values1[position_in_block] << "lala" << endl;
+           
+            cout << values1[position_in_block] << endl;
         }
         else {
             
@@ -713,7 +715,7 @@ int random_access_diff(int argc, char * argv[] ){
                  unpack(result1, buffer1, header1.dictsize);
                  result1.get().convert(values1);
             }
-            cout << values1[position_in_block] << "lala"  << endl;
+            cout << values1[position_in_block] << endl;
         }
    // cout <<  position_in_block << " "<< rightblock << endl;
         
@@ -795,7 +797,6 @@ int random_access_diff(int argc, char * argv[] ){
                 result1.get().convert(values1);
             }
             cout << values1[off] << endl;
-            cout << values1[off].size() << endl;
             
             
         }

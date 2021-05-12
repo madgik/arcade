@@ -239,7 +239,7 @@ OutputIt calc_diff(InputIt1 first1, InputIt1 last1,
 
 
 
-int compress_batch(vector <string> vals, FILE *f1, bloom_filter *filter, bool &isdictionary, vector <int> &sizediff, vector <string> &globaldict, unordered_map <string, bool> &glob, unordered_map<string, size_t> &lookup, vector <short> &diffvals){
+int compress_batch(vector <string> vals, FILE *f1, bloom_filter *filter, bool &isdictionary, vector <int> &sizediff, vector <string> &globaldict, unordered_map <string, bool> &glob, unordered_map<string, size_t> &lookup, vector <short> &diffvals, int blocknum){
     struct D header;
     header.numofvals = vals.size();
     vector <string> minmax(4);
@@ -400,7 +400,7 @@ if (diffdict == 1){
    
     header.lendiff = diff.size();
     
-    diffvals.push_back(sizediff.size());
+    diffvals.push_back(blocknum);
     diffvals.push_back(header.lendiff);
     short* a = &diffvals[0];
     header.previndices = diffvals.size();
@@ -504,7 +504,7 @@ else if (diffdict == 0){
     
     header.diff = 1; 
     
-    diffvals.push_back(0);
+    diffvals.push_back(blocknum);
     diffvals.push_back(header.lendiff);
     header.previndices = diffvals.size();
     short* a = &diffvals[0];
@@ -903,7 +903,7 @@ int compress(char* infile, char* outfile, int numofvals, char* attributes){
     for (int j = 0; j < COLNUM; j++){
                long tell1 = ftell(f1);
                //compress(dataset, f1, sizediff[j], globaldict[j], glob[j], lookup[j], diffvals[j]);
-               compress_batch(extractColumn(dataset,mcolumns[j]), f1, &filter, isdictionary, sizediff[j], globaldict[j], glob[j], lookup[j], diffvals[j]); 
+               compress_batch(extractColumn(dataset,mcolumns[j]), f1, &filter, isdictionary, sizediff[j], globaldict[j], glob[j], lookup[j], diffvals[j], blocknum); 
                //compress(slice(dataset,0,dataset.size()-1),f1);
                columnindexes[j] = tell1-tell;
     }
