@@ -756,8 +756,10 @@ int random_access_diff(int argc, char * argv[] ){
 
 
 
-auto get_column_value(FILE *f1, struct fileH fileheader1, struct D header1, vector <int> columns, vector <int> rowids){
+auto get_column_value(FILE *f1, int blocknum, long int blockstart, struct fileH fileheader1, struct D header1, vector <int> columns, vector <int> rowids){
 /*
+
+rowids are the relative rowids of the specific block
 TODO gets list with row ids and returns the values from the other columns
 Several trade-offs and optimisation opportunities
 
@@ -771,18 +773,43 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
     
 
 */
-    for (int i : rowids){
-        
 
+
+  vector <vector <string>> cols(columns.size(), std::vector<string>(rowids.size()));
+  for (int i: columns){
+    int current;
+  	fseek(f1, blockstart + sizeof(int)*i, SEEK_SET);
+   	result = fread(&current,sizeof(int),1,f1);
+   	fseek(f1, blockstart + sizeof(int)*(fileheader1.numofcols), SEEK_SET);
+    blockstart += current + sizeof(int)*(fileheader1.numofcols+1);
+    fseek(f1, blockstart, SEEK_SET);
+   	result =  fread(&header1, sizeof(struct D),1,f1);
+
+    if (header1.dictsize == 0){ // case no dictionary
+    
+      char buffer1[header1.indicessize];
+      result =  fread(buffer1,header1.indicessize,1,f1);
+      msgpack::unpacked result1;
+      unpack(result1, buffer1, header1.indicessize);
+      vector<string> values1;
+      result1.get().convert(values1);
+      
+      int c = 0;
+      for (int j : rowids){
+         cols[i][c] = values1[j];
+         c++;
+       
+      }
+    
+    }
+    
+    else {
+     //case dictionary
         continue;
-
-
-
-
-
+    
     }
 
-
+}
 
 return 0;
 }
@@ -827,6 +854,7 @@ int read_diff_filt(int argc, char * argv[] ){
  	while (totalcount1 < fileheader1.numofvals){
  	   
    		    int current, next;
+   		    int blockstart = initstep1;
    		    fseek(f1, initstep1 + sizeof(int)*join1, SEEK_SET);
    		    result = fread(&current,sizeof(int),1,f1);
    		    fseek(f1, initstep1 + sizeof(int)*(fileheader1.numofcols), SEEK_SET);
@@ -1664,7 +1692,6 @@ int read_diff_range(int argc, char * argv[] ){
 int main(int argc, char * argv[] ){
 
   
-
   if (strstr(argv[1], "snappy"))
       SNAPPY = 1;
   if (argc == 3){
