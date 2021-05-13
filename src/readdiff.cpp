@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <msgpack.hpp>
+#include "cache.h"
 #include <iostream>
 #include <sstream>
 #include <unistd.h>
@@ -10,24 +11,17 @@
 #include <iterator>
 #include <sys/time.h>
 #include <math.h>
-
-//////
 #include <cassert>
 #include <fstream>
 #include <iostream>
 #include <memory>
-
-
 #include "snappy.h"
-
 #include <getopt.h>
 #include <string>
 #include <memory>
 #include <iostream>
 #include <string>
-
 #include <gtest/gtest.h>
-
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -36,23 +30,9 @@
 #include <limits>
 #include <memory>
 #include <vector>
-
-
-
 #include <cmath>
 #include <iostream>
 #include <vector>
-#include <parquet/column_reader.h>
-#include <parquet/column_writer.h>
-#include <parquet/file_reader.h>
-#include <parquet/file_writer.h>
-#include <parquet/platform.h>
-#include <parquet/schema.h>
-#include <parquet/statistics.h>
-#include <parquet/test_util.h>
-#include <parquet/types.h>
-
-
 
 
 using namespace std;
@@ -68,23 +48,6 @@ struct D {
     int previndices;
 };
 
-struct Dglob {
-    int minmaxsize;
-    int indicessize;
-    int bytes;
-    int numofvals;
-};
-
-struct Dindirect {
-    int minmaxsize;
-    int indicessize;
-    int bytes;
-    int numofvals;
-    int mapsize;
-    int mapbytes;
-    int mapcount;
-};
-
 struct fileH {
      int numofvals;
      int numofcols;
@@ -97,14 +60,8 @@ struct fileHglob {
      int glob_size;
 };
 
-struct fileH_mostlyorderedglob {
-     int numofvals;
-     int numofcols;
-     int global_position;
-     int glob_size;
-     int sortedsize;
-     int totalsize;
-};
+
+
 
 int SNAPPY = 0;
 
@@ -120,8 +77,6 @@ int compare(int offset, string op, vector <float> predicate, vector <int> predmi
          for (int i=0; i < predicate.size(); i++)
         if ( offset < predicate[i] and offset >= predminmax[i])
             return 1;
-    
-    
 return 0;
 
 }
@@ -324,8 +279,6 @@ int read_diff_materialize(int argc, char * argv[] ){
     cout << count << " " << column[50000000]<< endl;
     fclose(f1);
     return 0; 
-
-
 }
 
 int read_diff(int argc, char * argv[] ){
@@ -421,7 +374,6 @@ int read_diff(int argc, char * argv[] ){
      		    	count++;
      		    }
      			initstep1 += next - current;
-            
             }
             else{
     		if (header1.bytes==1){ // two byte offsets /*read offsets of file 1*/
@@ -808,7 +760,30 @@ auto get_column_value(FILE *f1, struct fileH fileheader1, struct D header1, vect
 /*
 TODO gets list with row ids and returns the values from the other columns
 Several trade-offs and optimisation opportunities
+
+
+-- A cache with blocks/offsets, so that we do not read the disk multiple times for each rowid
+-- for each row id there are 2 cases:
+- the other column is not dictionary encoded -> get the other column and retrieve the value
+- the other column is dictionary encoded -> get the offset and given the min/max values calculate the dictionary in which the value exists. 
+This dictionary may be already in the cache, so fseek is avoided. The cache is big enough to hold ALL the dictionaries of the sequence.
+
+    
+
 */
+    for (int i : rowids){
+        
+
+        continue;
+
+
+
+
+
+    }
+
+
+
 return 0;
 }
 
@@ -1687,6 +1662,9 @@ int read_diff_range(int argc, char * argv[] ){
 
 
 int main(int argc, char * argv[] ){
+
+  
+
   if (strstr(argv[1], "snappy"))
       SNAPPY = 1;
   if (argc == 3){
