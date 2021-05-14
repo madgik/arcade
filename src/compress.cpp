@@ -265,7 +265,7 @@ int compress_batch(vector <string> vals, FILE *f1, bloom_filter *filter, bool &i
     //std::vector<string> glob = globaldict;
     //std::sort(glob.begin(), glob.end());
     
-    if (vec.size()*1.0/vals.size()>0.45){
+    if (vec.size()*1.0/vals.size()>0.80){
             isdictionary = false;
             header.dictsize = 0;
             header.previndices = 0;
