@@ -789,14 +789,16 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
 
   vector <vector <string>> cols(columns.size(), std::vector<string>(rowidsnum));
   int colnum = -1;
+  int initstep;
   for (int i: columns){
     colnum++;
+    initstep = blockstart;
     int current;
-  	fseek(f1, blockstart + sizeof(int)*i, SEEK_SET);
+  	fseek(f1, initstep + sizeof(int)*i, SEEK_SET);
    	result = fread(&current,sizeof(int),1,f1);
-   	fseek(f1, blockstart + sizeof(int)*(fileheader1.numofcols), SEEK_SET);
-    blockstart += current + sizeof(int)*(fileheader1.numofcols+1);
-    fseek(f1, blockstart, SEEK_SET);
+   	fseek(f1, initstep + sizeof(int)*(fileheader1.numofcols), SEEK_SET);
+    initstep += current + sizeof(int)*(fileheader1.numofcols+1);
+    fseek(f1, initstep, SEEK_SET);
    	result =  fread(&header1, sizeof(struct D),1,f1);
     
     if (header1.dictsize == 0){ // case no dictionary
@@ -938,7 +940,6 @@ int equi_filter(int argc, char * argv[] ){
     		    result1.get().convert(values1);
     		    }
     		    //cout << values1.front() << " la "<<values1.back() << " la "<<minmax1[0] << " la -" <<minmax1[1]<<endl;
-    		    
     		    if (boolminmax_diff)
     			if (value.compare(values1.front())<0 or value.compare(values1.back())>0){
    		      		count += header1.numofvals;
@@ -1064,8 +1065,7 @@ int equi_filter(int argc, char * argv[] ){
      		        count++;
      		    }
      		    cols = get_column_value(f1, blocknum, blockstart, fileheader1, header1, columns, rowids, found_index);
-     		    for (int i=0; i<cols[0].size(); i++){
-        			cout << cols[0][i] << endl;
+     		    
     			}
      			initstep1 += next-current;
      		}
@@ -1097,9 +1097,7 @@ int equi_filter(int argc, char * argv[] ){
      		    count++;
      		}
      		    cols = get_column_value(f1, blocknum, blockstart, fileheader1, header1, columns, rowids, found_index);
-     		    for (int i=0; i<cols[0].size(); i++){
-        			cout << cols[0][i] << endl;
-    			}
+     		    
      			initstep1 += next-current ;
      		}
      		if (header1.bytes==2){ // one byte offsets
@@ -1130,12 +1128,18 @@ int equi_filter(int argc, char * argv[] ){
      		    count++;
      		}
      		    cols = get_column_value(f1, blocknum, blockstart, fileheader1, header1, columns, rowids, found_index);
-     		    for (int i=0; i<cols[0].size(); i++){
-        				cout << cols[0][i] << endl;
-    			}
+
      		    
      			initstep1 += next-current ;
      		}
+     		
+     		 for (int i=0; i<cols[0].size(); i++){
+     		     for (int j=0; j<cols.size(); j++){
+     		      if (j == cols.size()-1)
+        			cout << cols[j][i];
+        		  else cout << cols[j][i] << "|";
+    			}
+    		  cout << endl;	
      		}
 		}
 	}
