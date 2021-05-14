@@ -265,6 +265,37 @@ int compress_batch(vector <string> vals, FILE *f1, bloom_filter *filter, bool &i
     //std::vector<string> glob = globaldict;
     //std::sort(glob.begin(), glob.end());
     
+    if (vec.size()*1.0/vals.size()>0.45){
+            isdictionary = false;
+            header.dictsize = 0;
+            header.previndices = 0;
+            globaldict.clear();
+    		glob.clear();
+    		sizediff.clear();
+    		diffvals.clear();
+    		lookup.clear();
+
+    
+    		std::stringstream buffermm;
+    		msgpack::pack(buffermm, minmax);
+    		string stmm = buffermm.str();
+    		header.minmaxsize = 0;//stmm.size();
+
+    
+    		std::stringstream buffer;
+    		msgpack::pack(buffer, vals);
+    		string st = buffer.str();
+            header.indicessize = st.size();
+    		header.lendiff = 0;
+
+        	header.bytes = 0;
+        	fwrite(&header, sizeof(header), 1, f1);
+        	//fwrite(&stmm[0], header.minmaxsize ,1 , f1 );
+        	fwrite(&st[0], header.indicessize ,1 , f1 );
+    
+            return 1;		
+    }
+    
 int diffdict = 1;
 int globdsize = globaldict.size();
 
@@ -890,7 +921,7 @@ int compress(char* infile, char* outfile, int numofvals, char* attributes){
         eof = true;
         break;
       }
-      dataset.push_back(line.substr(0, line.size()-1));  
+      dataset.push_back(line.substr(0, line.size()));  
       ++numValues;
       num_of_vals1++;      
     }
