@@ -769,7 +769,7 @@ int random_access_diff(int argc, char * argv[] ){
 
 
 
-auto get_column_value(FILE *f1, int blocknum, long int blockstart, struct fileH fileheader1, struct D header1, vector <int> columns, int* rowids, int rowidsnum){
+auto get_column_value(FILE *f1, int blocknum, long int blockstart, struct fileH fileheader1, struct D header1, vector <int> columns, int* rowids, int rowidsnum, int join1, vector <string> &vec){
 /*
 
 rowids are the relative rowids of the specific block
@@ -792,6 +792,11 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
   int initstep;
   for (int i: columns){
     colnum++;
+    if (i == join1){
+        cols[colnum] = vec;
+    }
+    else{
+    
     initstep = blockstart;
     int current;
   	fseek(f1, initstep + sizeof(int)*i, SEEK_SET);
@@ -825,6 +830,7 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
         continue;
     
     }
+    }
 
 }
 
@@ -833,23 +839,23 @@ return cols;
 
 
 
-int equi_filter(int argc, char * argv[] ){
+int equi_filter(int argc, char* filename,char* col_num,char* val,char* boolmin,char* boolmindiff,char* retcols){
     
     int ommits = 0;
     int ommits2 = 0;
     
     vector <vector <string>> cols;
-    vector <int> columns = extractattributes(argv[6]);
+    vector <int> columns = extractattributes(retcols);
     int colnum = columns.size();
     
-    int boolminmax = atoi(argv[4]); 
-    int boolminmax_diff =  atoi(argv[5]);
+    int boolminmax = atoi(boolmin); 
+    int boolminmax_diff =  atoi(boolmindiff);
     int totalcount1=0;
     FILE *f1;
-    f1 = fopen(argv[1],"rb");
-    string value = argv[3];
+    f1 = fopen(filename,"rb");
+    
     vector<string> parquetvalues1;
-
+    string value = val;
     int fcount = 0;
     int offset = -1;
     int global_len = 0;
@@ -871,10 +877,13 @@ int equi_filter(int argc, char * argv[] ){
 	
 	
 	int count = 0;
-	int join1 = atoi(argv[2]);
+	int join1 = atoi(col_num);
 	int blocknum = -1;
 	
+	
  	while (totalcount1 < fileheader1.numofvals){
+ 	     	int* rowids = new int[header1.numofvals];
+    		int found_index = 0;
  	        blocknum++;
    		    int current, next;
    		    int blockstart = initstep1;
@@ -886,7 +895,6 @@ int equi_filter(int argc, char * argv[] ){
             fseek(f1,initstep1, SEEK_SET);
    		    result =  fread(&header1, sizeof(struct D),1,f1);
    		    totalcount1 += header1.numofvals;
-   		    
    		    if (header1.dictsize == 0){
    		        if (totalcount1 == 0)
    		            parquetvalues1.reserve(fileheader1.numofvals);
@@ -1024,11 +1032,15 @@ int equi_filter(int argc, char * argv[] ){
                 if (offf == offset){
                   for (int i=0; i < header1.numofvals; i++){
      		    	col[fcount] = count;
+     		    	rowids[found_index] = i; 
+     		        found_index++;
      		    	fcount++;
      		    	count++;
      		    }
      		    // TODO in this case, the full block evaluates
-     		    cols = get_column_value(f1, blocknum, blockstart, fileheader1, header1, columns, col, fcount);
+     		    std::vector<string> myvec(found_index, value);
+     		    cols = get_column_value(f1, blocknum, blockstart, fileheader1, header1, columns, rowids, found_index, join1, myvec);
+     		    //cols = get_column_value(f1, blocknum, blockstart, fileheader1, header1, columns, col, fcount, join);
      		    
      		    }
      		    else {count += header1.numofvals;}
@@ -1036,6 +1048,7 @@ int equi_filter(int argc, char * argv[] ){
             
         }
         else{
+            
     		if (header1.bytes==1){ // two byte offsets /*read offsets of file 1*/
      			unsigned short offsets1 [header1.numofvals];
      			fseek(f1,initstep1+sizeof(struct D)+header1.dictsize+header1.previndices*2 + header1.minmaxsize,SEEK_SET);
@@ -1050,8 +1063,7 @@ int equi_filter(int argc, char * argv[] ){
     		    }
     		    else 
     			result =  fread(offsets1,header1.indicessize,1,f1);
-    			int* rowids = new int[header1.numofvals];
-    			int found_index = 0;
+
 				for (int i=0; i < header1.numofvals; i++){
      		    
      		        if (offsets1[i] == offset){
@@ -1064,11 +1076,12 @@ int equi_filter(int argc, char * argv[] ){
      		        }
      		        count++;
      		    }
-     		    cols = get_column_value(f1, blocknum, blockstart, fileheader1, header1, columns, rowids, found_index);
+     		    
      		    
     			}
      			initstep1 += next-current;
      		}
+
      		if (header1.bytes==0){ // four byte offsets
      			unsigned int offsets1 [header1.numofvals];
      			fseek(f1,initstep1+sizeof(struct D)+header1.dictsize +header1.previndices*2+ header1.minmaxsize,SEEK_SET);
@@ -1082,8 +1095,7 @@ int equi_filter(int argc, char * argv[] ){
     		    }
     		    else 
     			result =  fread(offsets1,header1.indicessize,1,f1);
-    			int* rowids = new int[header1.numofvals];
-    			int found_index = 0;
+
 				for (int i=0; i < header1.numofvals; i++){
      		    
      		    if (offsets1[i] == offset){
@@ -1096,7 +1108,6 @@ int equi_filter(int argc, char * argv[] ){
      		        }
      		    count++;
      		}
-     		    cols = get_column_value(f1, blocknum, blockstart, fileheader1, header1, columns, rowids, found_index);
      		    
      			initstep1 += next-current ;
      		}
@@ -1113,8 +1124,7 @@ int equi_filter(int argc, char * argv[] ){
     		    }
     		    else 
     			result =  fread(offsets1,header1.indicessize,1,f1);
-    			int* rowids = new int[header1.numofvals];
-    			int found_index = 0;
+
      			for (int i=0; i < header1.numofvals; i++){
      		    
      		    if (offsets1[i] == offset){
@@ -1127,17 +1137,18 @@ int equi_filter(int argc, char * argv[] ){
      		        }
      		    count++;
      		}
-     		    cols = get_column_value(f1, blocknum, blockstart, fileheader1, header1, columns, rowids, found_index);
-
-     		    
      			initstep1 += next-current ;
      		}
-     		
+     		std::vector<string> myvec(found_index, value);
+     		cols = get_column_value(f1, blocknum, blockstart, fileheader1, header1, columns, rowids, found_index, join1, myvec);
      		 for (int i=0; i<cols[0].size(); i++){
      		     for (int j=0; j<cols.size(); j++){
      		      if (j == cols.size()-1)
         			cout << cols[j][i];
-        		  else cout << cols[j][i] << "|";
+        		  else {
+        		  cout << cols[j][i] ;
+        		  cout << "\033[1;31m|\033[0m";
+        		  }
     			}
     		  cout << endl;	
      		}
@@ -2029,7 +2040,7 @@ int read_diff_range(int argc, char * argv[] ){
 
 
 int main(int argc, char * argv[] ){
-
+  std::cout.flush();
   
   if (strstr(argv[1], "snappy"))
       SNAPPY = 1;
@@ -2044,14 +2055,17 @@ int main(int argc, char * argv[] ){
   }
   
   if (argc == 6){
+      
       if (strstr(argv[1], "diff"))
          return read_diff_filt(argc,argv);
      
       }
   
   if (argc == 7){
+      
       if (strstr(argv[1], "diff"))
-         return equi_filter(argc,argv);
+         
+         return equi_filter(argc, argv[1],argv[2],argv[3],argv[4],argv[5],argv[6]);
      
       }
  if (argc == 8){
