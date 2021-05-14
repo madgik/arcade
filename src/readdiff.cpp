@@ -788,8 +788,9 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
 
 
   vector <vector <string>> cols(columns.size(), std::vector<string>(rowidsnum));
+  int colnum = -1;
   for (int i: columns){
-    
+    colnum++;
     int current;
   	fseek(f1, blockstart + sizeof(int)*i, SEEK_SET);
    	result = fread(&current,sizeof(int),1,f1);
@@ -809,7 +810,7 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
       
       int c = 0;
       for (int j = 0; j < rowidsnum; j++){
-         cols[0][c] = values1[rowids[j]];
+         cols[colnum][c] = values1[rowids[j]];
          
          c++;
        
