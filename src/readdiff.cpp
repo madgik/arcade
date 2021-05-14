@@ -33,6 +33,7 @@
 #include <cmath>
 #include <iostream>
 #include <vector>
+#include <iomanip>
 
 
 using namespace std;
@@ -80,6 +81,18 @@ int compare(int offset, string op, vector <float> predicate, vector <int> predmi
 return 0;
 
 }
+
+
+static size_t max_line_length(std::vector<std::string> &lines) {
+    size_t max = 0;
+    for (auto it = lines.begin(); it != lines.end(); it++) {
+        if (it->length() > max) {
+            max = it->length();
+        }
+    }
+    return max;
+}
+
 
 vector <int> extractattributes(std::string s) {
   vector <int> columns;
@@ -908,11 +921,27 @@ int equi_filter(int argc, char* filename,char* col_num,char* val,char* boolmin,c
     			result1.get().convert(values1);
     			count += values1.size();
     			for(string i : values1) 
-                    if (i == value)
+                    if (i == value){
+                      found_index++;
                       fcount++;
+                      }
     			parquetvalues1.insert( parquetvalues1.end(), values1.begin(), values1.end() );
+    			std::vector<string> myvec(found_index, value);
+     		    cols = get_column_value(f1, blocknum, blockstart, fileheader1, header1, columns, rowids, found_index, join1, myvec);
+     		    for (int i=0; i<cols[0].size(); i++){
+     		     for (int j=0; j<cols.size(); j++){
+     		      if (j == cols.size()-1)
+        			cout << cols[j][i];
+        		  else {
+        		  cout << cols[j][i] ;
+        		  cout << "\033[1;31m | \033[0m";
+        		  }
+    			}
+    		  cout << endl;	
+     		}
    				//totalcount1 += header1.numofvals;
    				initstep1 += next-current;
+   				
     		}
     		else {
     		int check = 0;
@@ -1141,13 +1170,16 @@ int equi_filter(int argc, char* filename,char* col_num,char* val,char* boolmin,c
      		}
      		std::vector<string> myvec(found_index, value);
      		cols = get_column_value(f1, blocknum, blockstart, fileheader1, header1, columns, rowids, found_index, join1, myvec);
+     		
+     		
+     		
      		 for (int i=0; i<cols[0].size(); i++){
      		     for (int j=0; j<cols.size(); j++){
      		      if (j == cols.size()-1)
         			cout << cols[j][i];
         		  else {
         		  cout << cols[j][i] ;
-        		  cout << "\033[1;31m|\033[0m";
+        		  cout << "\033[1;31m | \033[0m";
         		  }
     			}
     		  cout << endl;	
