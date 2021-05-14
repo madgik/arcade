@@ -33,7 +33,6 @@
 #include <cmath>
 #include <iostream>
 #include <vector>
-#include <iomanip>
 
 
 using namespace std;
@@ -83,15 +82,6 @@ return 0;
 }
 
 
-static size_t max_line_length(std::vector<std::string> &lines) {
-    size_t max = 0;
-    for (auto it = lines.begin(); it != lines.end(); it++) {
-        if (it->length() > max) {
-            max = it->length();
-        }
-    }
-    return max;
-}
 
 
 vector <int> extractattributes(std::string s) {
@@ -120,7 +110,6 @@ int read_diff_materialize(int argc, char * argv[] ){
     fseek(f1, 0, SEEK_SET);  
     char *fptr1 = (char*)malloc(fsize1 + 1);
     result =  fread(fptr1, 1, fsize1, f1);
-    fclose(f1);
     
     /*read marker of file*/
     char marker[5];
@@ -303,7 +292,7 @@ int read_diff_materialize(int argc, char * argv[] ){
 		}
 	}
 
-    cout << count << " " << endl;
+    cout << count << " " << column[350000] << endl;
     fclose(f1);
     return 0; 
 }
@@ -2106,4 +2095,6 @@ int main(int argc, char * argv[] ){
       
         
       }
+      
+      
 }
