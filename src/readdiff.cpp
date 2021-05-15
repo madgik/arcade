@@ -770,7 +770,7 @@ int random_access_diff(int argc, char * argv[] ){
 
 
 
-auto get_column_value(FILE *f1, int blocknum, long int blockstart, struct fileH fileheader1, struct D header1, vector <int> columns, int* rowids, int rowidsnum, int join1, vector <string> &vec, long* data){
+auto get_column_value(FILE *f1, int blocknum, long int blockstart, struct fileH fileheader1, struct D header1, vector <int> columns, int* rowids, int rowidsnum, int join1, vector <string> &vec, long* data, unordered_map <int, vector <string>> &dict_cache){
 /*
 
 rowids are the relative rowids of the specific block
@@ -830,7 +830,7 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
     
     
     else if (header1.diff == 0){
-     //case dictionary
+     //case differential dictionary
      int c = 0;
 
       for (int j = 0; j < rowidsnum; j++){
@@ -940,9 +940,10 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
             fseek(f1,initstep2, SEEK_SET);
             result =  fread(&header2, sizeof(struct D),1,f1);
             
+            if (dict_cache.find(rightblock) == dict_cache.end()){
             vector<string> values1;
             fseek(f1,initstep2+sizeof(struct D)+header2.minmaxsize+ header2.previndices*2,SEEK_SET);
-             
+            
             if (SNAPPY){
    			             char buffer1[header2.dictsize];
     		             result =  fread(buffer1,header2.dictsize,1,f1);
@@ -951,28 +952,32 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
     		             msgpack::unpacked result1;
     		             unpack(result1, output.data(), output.size());
     		             result1.get().convert(values1);
+    		             dict_cache[rightblock] = values1;
     		}
             else{
-                
-                
                 char buffer1[header2.dictsize];
-                
-            
                 result =  fread(buffer1,header2.dictsize,1,f1);
-                
                 msgpack::unpacked result1;
                 unpack(result1, buffer1, header2.dictsize);
                 result1.get().convert(values1);
+                dict_cache[rightblock] = values1;
                 
             }
             cols[colnum][c] = values1[position_in_block];
             //cout << values1[position_in_block] << endl;
             c++;
-
+           }
+           else {
+           cols[colnum][c] = dict_cache[rightblock][position_in_block];
+            //cout << values1[position_in_block] << endl;
+            c++;
+           
+           
+           }
             
         }
         else {
-            
+            if (dict_cache.find(rightblock) == dict_cache.end()){
             fseek(f1,initstep1+sizeof(struct D)+header1.minmaxsize+ header1.previndices*2,SEEK_SET);
             vector<string> values1;
             if (SNAPPY){
@@ -983,6 +988,7 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
     		             msgpack::unpacked result1;
     		             unpack(result1, output.data(), output.size());
     		             result1.get().convert(values1);
+    		             dict_cache[rightblock] = values1;
     		}
             else{
                  char buffer1[header1.dictsize];
@@ -990,16 +996,25 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
                  msgpack::unpacked result1;
                  unpack(result1, buffer1, header1.dictsize);
                  result1.get().convert(values1);
+                 dict_cache[rightblock] = values1;
             }
+            
+            
             cols[colnum][c] = values1[position_in_block];
             c++;
+            }
+            else {
+                cols[colnum][c] = dict_cache[rightblock][position_in_block];
+                c++;
+            
+            }
             //cout << values1[position_in_block] << endl;
         }
    // cout <<  position_in_block << " "<< rightblock << endl;
         
         }
     }
-        else if (header1.diff == 1){
+        else if (header1.diff == 1){ //local dictionary
         int c = 0;
         
           for (int j = 0; j < rowidsnum; j++){
@@ -1070,6 +1085,7 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
     		             msgpack::unpacked result1;
     		             unpack(result1, output.data(), output.size());
     		             result1.get().convert(values1);
+    		             dict_cache[0] = values1;
     		}
             else{
                 char buffer1[header1.dictsize];
@@ -1077,6 +1093,7 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
                 msgpack::unpacked result1;
                 unpack(result1, buffer1, header1.dictsize);
                 result1.get().convert(values1);
+                dict_cache[0] = values1;
             }
             cols[colnum][c] = values1[off];
             c++;
@@ -1099,7 +1116,7 @@ int equi_filter(int argc, char* filename,char* col_num,char* val,char* boolmin,c
     
     int ommits = 0;
     int ommits2 = 0;
-    
+    unordered_map <int, vector <string>> dict_cache;
     vector <vector <string>> cols;
     vector <int> columns = extractattributes(retcols);
     int colnum = columns.size();
@@ -1170,7 +1187,7 @@ int equi_filter(int argc, char* filename,char* col_num,char* val,char* boolmin,c
                       }
     			parquetvalues1.insert( parquetvalues1.end(), values1.begin(), values1.end() );
     			std::vector<string> myvec(found_index, value);
-     		    cols = get_column_value(f1, blocknum, blockstart, fileheader1, header1, columns, rowids, found_index, join1, myvec, data);
+     		    cols = get_column_value(f1, blocknum, blockstart, fileheader1, header1, columns, rowids, found_index, join1, myvec, data, dict_cache);
      		    for (int i=0; i<cols[0].size(); i++){
      		     for (int j=0; j<cols.size(); j++){
      		      if (j == cols.size()-1)
@@ -1188,7 +1205,7 @@ int equi_filter(int argc, char* filename,char* col_num,char* val,char* boolmin,c
     		}
     		else {
     		int check = 0;
-    		if (header1.diff == 1){  global_len = 0;}
+    		if (header1.diff == 1){  global_len = 0; dict_cache.clear();}
     		if(offset  == -1 or header1.diff == 1){
     		 int temp = global_len;
     		 global_len += header1.lendiff;
@@ -1311,7 +1328,7 @@ int equi_filter(int argc, char* filename,char* col_num,char* val,char* boolmin,c
      		    }
      		    // TODO in this case, the full block evaluates
      		    std::vector<string> myvec(found_index, value);
-     		    cols = get_column_value(f1, blocknum, blockstart, fileheader1, header1, columns, rowids, found_index, join1, myvec, data);
+     		    cols = get_column_value(f1, blocknum, blockstart, fileheader1, header1, columns, rowids, found_index, join1, myvec, data, dict_cache);
      		    //cols = get_column_value(f1, blocknum, blockstart, fileheader1, header1, columns, col, fcount, join);
      		    
      		    }
@@ -1412,7 +1429,7 @@ int equi_filter(int argc, char* filename,char* col_num,char* val,char* boolmin,c
      			initstep1 += next-current ;
      		}
      		std::vector<string> myvec(found_index, value);
-     		cols = get_column_value(f1, blocknum, blockstart, fileheader1, header1, columns, rowids, found_index, join1, myvec, data);
+     		cols = get_column_value(f1, blocknum, blockstart, fileheader1, header1, columns, rowids, found_index, join1, myvec, data, dict_cache);
      		
      		
      		
