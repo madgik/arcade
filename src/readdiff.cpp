@@ -787,7 +787,7 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
 
 */
 
-
+  
   vector <vector <string>> cols(columns.size(), std::vector<string>(rowidsnum));
   int colnum = -1;
   int initstep;
@@ -1017,6 +1017,7 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
         else if (header1.diff == 1){ //local dictionary
         int c = 0;
         
+        
           for (int j = 0; j < rowidsnum; j++){
             int initstep1 = initstep;
             int off;
@@ -1038,6 +1039,7 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
                 off = offsets1;
                 }
             }
+            
             
             if (header1.bytes==0){ // four byte offsets
             if (SNAPPY){
@@ -1075,6 +1077,7 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
                 off = offsets1;
                 }
             }
+            
             fseek(f1,initstep1+sizeof(struct D)+header1.minmaxsize+ header1.previndices*2,SEEK_SET);
             vector<string> values1;
              if (SNAPPY){
@@ -1094,6 +1097,7 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
                 unpack(result1, buffer1, header1.dictsize);
                 result1.get().convert(values1);
                 dict_cache[0] = values1;
+                
             }
             cols[colnum][c] = values1[off];
             c++;
@@ -1110,16 +1114,14 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
 return cols;
 }
 
-
-
 int equi_filter(int argc, char* filename,char* col_num,char* val,char* boolmin,char* boolmindiff,char* retcols){
     
     int ommits = 0;
     int ommits2 = 0;
     unordered_map <int, vector <string>> dict_cache;
     vector <vector <string>> cols;
-    vector <int> columns = extractattributes(retcols);
-    int colnum = columns.size();
+    vector <int> retcolumns = extractattributes(retcols);
+    int colnum = retcolumns.size();
     
     int boolminmax = atoi(boolmin); 
     int boolminmax_diff =  atoi(boolmindiff);
@@ -1155,7 +1157,7 @@ int equi_filter(int argc, char* filename,char* col_num,char* val,char* boolmin,c
 	
 	
  	while (totalcount1 < fileheader1.numofvals){
- 	     	int* rowids = new int[header1.numofvals];
+ 	     	int rowids[header1.numofvals]; //TODO dynamic memory allocation
     		int found_index = 0;
  	        blocknum++;
    		    int current, next;
@@ -1187,14 +1189,14 @@ int equi_filter(int argc, char* filename,char* col_num,char* val,char* boolmin,c
                       }
     			parquetvalues1.insert( parquetvalues1.end(), values1.begin(), values1.end() );
     			std::vector<string> myvec(found_index, value);
-     		    cols = get_column_value(f1, blocknum, blockstart, fileheader1, header1, columns, rowids, found_index, join1, myvec, data, dict_cache);
+     		    cols = get_column_value(f1, blocknum, blockstart, fileheader1, header1, retcolumns, rowids, found_index, join1, myvec, data, dict_cache);
      		    for (int i=0; i<cols[0].size(); i++){
      		     for (int j=0; j<cols.size(); j++){
      		      if (j == cols.size()-1)
         			cout << cols[j][i];
         		  else {
         		  cout << cols[j][i] ;
-        		  cout << "\033[1;31m | \033[0m";
+        		  cout << "\033[1;31m|\033[0m";
         		  }
     			}
     		  cout << endl;	
@@ -1328,8 +1330,11 @@ int equi_filter(int argc, char* filename,char* col_num,char* val,char* boolmin,c
      		    }
      		    // TODO in this case, the full block evaluates
      		    std::vector<string> myvec(found_index, value);
-     		    cols = get_column_value(f1, blocknum, blockstart, fileheader1, header1, columns, rowids, found_index, join1, myvec, data, dict_cache);
-     		    //cols = get_column_value(f1, blocknum, blockstart, fileheader1, header1, columns, col, fcount, join);
+
+   
+
+     		    cols = get_column_value(f1, blocknum, blockstart, fileheader1, header1, retcolumns, rowids, found_index, join1, myvec, data, dict_cache);
+     		    //cols = get_column_value(f1, blocknum, blockstart, fileheader1, header1, retcolumns, col, fcount, join);
      		    
      		    }
      		    else {count += header1.numofvals;}
@@ -1364,7 +1369,7 @@ int equi_filter(int argc, char* filename,char* col_num,char* val,char* boolmin,c
      		            fcount++;
      		        }
      		        count++;
-     		    }
+     		    
      		    
      		    
     			}
@@ -1429,7 +1434,7 @@ int equi_filter(int argc, char* filename,char* col_num,char* val,char* boolmin,c
      			initstep1 += next-current ;
      		}
      		std::vector<string> myvec(found_index, value);
-     		cols = get_column_value(f1, blocknum, blockstart, fileheader1, header1, columns, rowids, found_index, join1, myvec, data, dict_cache);
+     		cols = get_column_value(f1, blocknum, blockstart, fileheader1, header1, retcolumns, rowids, found_index, join1, myvec, data, dict_cache);
      		
      		
      		
@@ -1439,10 +1444,11 @@ int equi_filter(int argc, char* filename,char* col_num,char* val,char* boolmin,c
         			cout << cols[j][i];
         		  else {
         		  cout << cols[j][i] ;
-        		  cout << "\033[1;31m | \033[0m";
+        		  cout << "\033[1;31m|\033[0m";
         		  }
     			}
     		  cout << endl;	
+     		}
      		}
 		}
 	}
