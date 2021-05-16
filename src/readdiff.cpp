@@ -1162,7 +1162,7 @@ int equi_filter(int argc, char* filename,char* col_num,char* val,char* boolmin,c
 	
 	
  	while (totalcount1 < fileheader1.numofvals){
- 	     	int rowids[header1.numofvals]; //TODO dynamic memory allocation
+ 	     	int *rowids = new int[header1.numofvals]; //TODO dynamic memory allocation
     		int found_index = 0;
  	        blocknum++;
    		    int current, next;
@@ -1456,6 +1456,7 @@ int equi_filter(int argc, char* filename,char* col_num,char* val,char* boolmin,c
      		}
      		}
 		}
+		delete [] rowids;
 	}
     /*for (int i=0; i<fcount; i++){
         cout << col[i] << endl;
