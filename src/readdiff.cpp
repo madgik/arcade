@@ -2343,7 +2343,7 @@ int read_diff_range(int argc, char * argv[] ){
 
 
 int main(int argc, char * argv[] ){
-  std::cout.flush();
+  //std::cout.flush();
   
   if (strstr(argv[1], "snappy"))
       SNAPPY = 1;
