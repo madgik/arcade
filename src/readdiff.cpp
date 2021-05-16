@@ -833,10 +833,10 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
      //case differential dictionary
      int c = 0;
 
-      for (int j = 0; j < rowidsnum; j++){
+      
         int initstep1 = initstep;
 
-        int off;
+        int off[rowidsnum];
         
         if (header1.bytes==1){ // two byte offsets /*read offsets of file 1*/
               if (SNAPPY){
@@ -847,13 +847,17 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
     		       string output;
     		       snappy::Uncompress(buffer1, header1.indicessize, &output);
     		       copy(&output[0], &output[0]+(sizeof(unsigned short)*header1.numofvals), reinterpret_cast<char*>(offsets1));
-    		       off = offsets1[rowids[j]];
+    		       for (int j = 0; j < rowidsnum; j++)
+    		           off[j] = offsets1[rowids[j]];
     		    }
     		    else{
-                  unsigned short offsets1;
-                  fseek(f1,initstep1+sizeof(struct D)+header1.dictsize+header1.previndices*2 + header1.minmaxsize+rowids[j]*2,SEEK_SET);
-                  result =  fread(&offsets1,2,1,f1);
-                  off = offsets1;
+                  unsigned short offsets1[header1.numofvals];
+                  //fseek(f1,initstep1+sizeof(struct D)+header1.dictsize+header1.previndices*2 + header1.minmaxsize+rowids[j]*2,SEEK_SET);
+                  fseek(f1,initstep1+sizeof(struct D)+header1.dictsize+header1.previndices*2 + header1.minmaxsize,SEEK_SET);
+                  result =  fread(&offsets1,2,header1.numofvals,f1);
+                  for (int j = 0; j < rowidsnum; j++)
+                      off[j] = offsets1[rowids[j]];
+                      
                   }
               }
               
@@ -866,13 +870,15 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
     		       string output;
     		       snappy::Uncompress(buffer1, header1.indicessize, &output);
     		       copy(&output[0], &output[0]+(sizeof(unsigned int)*header1.numofvals), reinterpret_cast<char*>(offsets1));
-    		       off = offsets1[rowids[j]];
+    		       for (int j = 0; j < rowidsnum; j++)
+    		           off[j] = offsets1[rowids[j]];
     		    }
     		    else{
-                  unsigned int offsets1;
-                  fseek(f1,initstep1+sizeof(struct D)+header1.dictsize +header1.previndices*2+ header1.minmaxsize+rowids[j]*4,SEEK_SET);
-                  result =  fread(&offsets1,4,1,f1);
-                  off = offsets1;
+                  unsigned int offsets1[header1.numofvals];
+                  fseek(f1,initstep1+sizeof(struct D)+header1.dictsize+header1.previndices*2 + header1.minmaxsize,SEEK_SET);
+                  result =  fread(&offsets1,4,header1.numofvals,f1);
+                  for (int j = 0; j < rowidsnum; j++)
+                      off[j] = offsets1[rowids[j]];
                   }
               }
               if (header1.bytes==2){ // one byte offsets
@@ -884,17 +890,19 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
     		       string output;
     		       snappy::Uncompress(buffer1, header1.indicessize, &output);
     		       copy(&output[0], &output[0]+(sizeof(unsigned char)*header1.numofvals), reinterpret_cast<char*>(offsets1));
-    		       off = offsets1[rowids[j]];
+    		       for (int j = 0; j < rowidsnum; j++)
+    		           off[j] = offsets1[rowids[j]];
     		    }
     		    else{
-                  unsigned char offsets1;
-                  fseek(f1,initstep1+sizeof(struct D)+header1.dictsize +header1.previndices*2+ header1.minmaxsize+rowids[j],SEEK_SET);
-                  result =  fread(&offsets1,1,1,f1);
-                  off = offsets1;
+                  unsigned char offsets1[header1.numofvals];
+                  fseek(f1,initstep1+sizeof(struct D)+header1.dictsize+header1.previndices*2 + header1.minmaxsize,SEEK_SET);
+                  result =  fread(&offsets1,1,header1.numofvals,f1);
+                  for (int j = 0; j < rowidsnum; j++)
+                      off[j] = offsets1[rowids[j]];
                   }
               }
                
-        
+    for (int j = 0; j < rowidsnum; j++){
     int temp = 0;
     int prevtemp = 0;
     int rightblock = 0;
@@ -906,29 +914,25 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
         prevtemp = temp;
         temp += previndex[co];
 
-        if (temp < off)
+        if (temp < off[j])
             continue;
         else {
             found = 1;
-            position_in_block = off - prevtemp;
+            position_in_block = off[j] - prevtemp;
             rightblock = previndex[co-1];
             break;
         }
     }
     
       
-        if (header1.previndices == 0){ //i am in the first block
-                found = 1;
-                position_in_block = off;
-                
-            }
+       
         if (found == 0){
-            position_in_block = off - temp;
+            position_in_block = off[j] - temp;
             rightblock = blocknum;
         }
         
         if (blocknum != rightblock){
-            
+            if (dict_cache.find(rightblock) == dict_cache.end()){
             unsigned long initstep2 = data[rightblock];
              
             struct D header2;
@@ -939,8 +943,6 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
             initstep2 += current2 + sizeof(int)*(fileheader1.numofcols+1);
             fseek(f1,initstep2, SEEK_SET);
             result =  fread(&header2, sizeof(struct D),1,f1);
-            
-            if (dict_cache.find(rightblock) == dict_cache.end()){
             vector<string> values1;
             fseek(f1,initstep2+sizeof(struct D)+header2.minmaxsize+ header2.previndices*2,SEEK_SET);
             
@@ -998,29 +1000,23 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
                  result1.get().convert(values1);
                  dict_cache[rightblock] = values1;
             }
-            
-            
+
             cols[colnum][c] = values1[position_in_block];
             c++;
             }
             else {
+                
                 cols[colnum][c] = dict_cache[rightblock][position_in_block];
                 c++;
             
             }
-            //cout << values1[position_in_block] << endl;
         }
-   // cout <<  position_in_block << " "<< rightblock << endl;
-        
         }
     }
         else if (header1.diff == 1){ //local dictionary
         int c = 0;
-        
-        
-          for (int j = 0; j < rowidsnum; j++){
             int initstep1 = initstep;
-            int off;
+            int off[rowidsnum];
             if (header1.bytes==1){ // two byte offsets /*read offsets of file 1*/
             if (SNAPPY){
             fseek(f1,initstep1+sizeof(struct D)+header1.dictsize+header1.previndices*2 + header1.minmaxsize,SEEK_SET);
@@ -1030,13 +1026,16 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
     		       string output;
     		       snappy::Uncompress(buffer1, header1.indicessize, &output);
     		       copy(&output[0], &output[0]+(sizeof(unsigned short)*header1.numofvals), reinterpret_cast<char*>(offsets1));
-    		       off = offsets1[rowids[j]];
+    		       for (int j = 0; j < rowidsnum; j++)
+    		       	   off[j] = offsets1[rowids[j]];
     		    }
     		    else{
-                unsigned short offsets1;
-                fseek(f1,initstep1+sizeof(struct D)+header1.dictsize+header1.previndices*2 + header1.minmaxsize+rowids[j]*2,SEEK_SET);
-                result =  fread(&offsets1,2,1,f1);
-                off = offsets1;
+                unsigned short offsets1[header1.numofvals];
+                fseek(f1,initstep1+sizeof(struct D)+header1.dictsize+header1.previndices*2 + header1.minmaxsize,SEEK_SET);
+                result =  fread(&offsets1,2,header1.numofvals,f1);
+                for (int j = 0; j < rowidsnum; j++)
+                    off[j] = offsets1[rowids[j]];
+                
                 }
             }
             
@@ -1050,13 +1049,16 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
     		       string output;
     		       snappy::Uncompress(buffer1, header1.indicessize, &output);
     		       copy(&output[0], &output[0]+(sizeof(unsigned int)*header1.numofvals), reinterpret_cast<char*>(offsets1));
-    		       off = offsets1[rowids[j]];
+    		       for (int j = 0; j < rowidsnum; j++)
+    		       	   off[j] = offsets1[rowids[j]];
     		    }
     		    else{
-                unsigned int offsets1;
-                fseek(f1,initstep1+sizeof(struct D)+header1.dictsize +header1.previndices*2+ header1.minmaxsize+rowids[j]*4,SEEK_SET);
-                result =  fread(&offsets1,4,1,f1);
-                off = offsets1;
+                unsigned int offsets1[header1.numofvals];
+                fseek(f1,initstep1+sizeof(struct D)+header1.dictsize+header1.previndices*2 + header1.minmaxsize,SEEK_SET);
+                result =  fread(&offsets1,4,header1.numofvals,f1);
+                for (int j = 0; j < rowidsnum; j++)
+                    off[j] = offsets1[rowids[j]];
+                
                 }
             }
             if (header1.bytes==2){ // one byte offsets
@@ -1068,13 +1070,15 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
     		       string output;
     		       snappy::Uncompress(buffer1, header1.indicessize, &output);
     		       copy(&output[0], &output[0]+(sizeof(unsigned char)*header1.numofvals), reinterpret_cast<char*>(offsets1));
-    		       off = offsets1[rowids[j]];
+    		       for (int j = 0; j < rowidsnum; j++)
+    		       	   off[j] = offsets1[rowids[j]];
     		    }
     		    else{
-                unsigned char offsets1;
-                fseek(f1,initstep1+sizeof(struct D)+header1.dictsize +header1.previndices*2+ header1.minmaxsize+rowids[j],SEEK_SET);
-                result =  fread(&offsets1,1,1,f1);
-                off = offsets1;
+                unsigned char offsets1[header1.numofvals];
+                fseek(f1,initstep1+sizeof(struct D)+header1.dictsize+header1.previndices*2 + header1.minmaxsize,SEEK_SET);
+                result =  fread(&offsets1,1,header1.numofvals,f1);
+                for (int j = 0; j < rowidsnum; j++)
+                    off[j] = offsets1[rowids[j]];
                 }
             }
             
@@ -1099,8 +1103,9 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
                 dict_cache[0] = values1;
                 
             }
-            cols[colnum][c] = values1[off];
-            c++;
+            for (int j = 0; j < rowidsnum; j++){
+                cols[colnum][c] = values1[off[j]];
+                c++;
             //cout << values1[off] << endl;
             
             }
