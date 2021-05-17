@@ -50,7 +50,7 @@ struct rec {
 unsigned long global_dict_memory = 0;
 
 int permanent_decision = 1;
-
+double duration = 0.0;
 double duration5 = 0.0;
 
 static char gDelimiter = ',';
@@ -68,6 +68,8 @@ vector <int> extractattributes(std::string s) {
 }
 
 vector<std::string> extractColumn(vector<std::string> dataset, uint64_t colIndex) {
+  double start = std::clock();
+    
   vector<std::string> column(dataset.size());
   for (int i=0; i < dataset.size(); i++){
       	uint64_t col = 0;
@@ -82,6 +84,7 @@ vector<std::string> extractColumn(vector<std::string> dataset, uint64_t colIndex
   		}
   		column[i] = (col == colIndex ? dataset[i].substr(start, end - start) : "");
   }
+  duration += ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
   return column;
 }
 
@@ -624,7 +627,7 @@ int compress(char* infile, char* outfile, int numofvals, char* attributes){
     std::string input;
     input = infile;
     std::clock_t start;
-    double duration;
+    
     
     std::ifstream finput(input.c_str());
     
@@ -663,7 +666,7 @@ int compress(char* infile, char* outfile, int numofvals, char* attributes){
         eof = true;
         break;
       }
-      dataset.push_back(line.substr(0, line.size()-1));  
+      dataset.push_back(line.substr(0, line.size()));  
       ++numValues;
       num_of_vals1++;      
     }

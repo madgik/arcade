@@ -55,15 +55,6 @@ struct fileH {
      int numofblocks;
 };
 
-struct fileHglob {
-     int numofvals;
-     int numofcols;
-     int glob_size;
-};
-
-
-
-
 int SNAPPY = 0;
 
 size_t result;
@@ -139,7 +130,7 @@ int read_diff_materialize(int argc, char * argv[] ){
             initstep1 += current + sizeof(int)*(fileheader1.numofcols+1);
    		    memcpy(&header1,&fptr1[initstep1], sizeof(struct D));
    //		    cout << header1.dictsize << " "<< header1.indicessize <<" "<< header1.numofvals << " "<< header1.minmaxsize << " "<< header1.bytes <<endl;
-       
+            
    		    if (header1.dictsize == 0){
    		        if (totalcount1 == 0)
    		            parquetvalues1.reserve(fileheader1.numofvals);
@@ -260,6 +251,7 @@ int read_diff_materialize(int argc, char * argv[] ){
      			initstep1 += next-current ;
      		}
      		if (header1.bytes==2){ // one byte offsets
+     		
      			unsigned char offsets1 [header1.numofvals];
      			if (SNAPPY){
    			       char buffer1[header1.indicessize];
@@ -293,7 +285,7 @@ int read_diff_materialize(int argc, char * argv[] ){
 		}
 	}
 
-    cout << count << " " << column[350000] << endl;
+    cout << count << " " << column[10] << endl;
     fclose(f1);
     return 0; 
 }
@@ -508,13 +500,26 @@ int random_access_diff(int argc, char * argv[] ){
         vector <vector <int>> index1;
 
         int* col = new int[fileheader1.numofvals];
-
         long data[fileheader1.numofblocks];
-        result =  fread(data,fileheader1.numofblocks*8,1,f1);
-        int blocknum = row/data[fileheader1.numofblocks -1];
-        int rowid = row%data[fileheader1.numofblocks -1];
         
-        unsigned long initstep1 = data[blocknum];
+        int rowid = 0;
+        unsigned long initstep1 = 0;
+        int blocknum = 0;
+        result =  fread(data,fileheader1.numofblocks*8,1,f1);
+        if (fileheader1.numofblocks > 1){
+        	
+        	blocknum = row/data[fileheader1.numofblocks -1];
+        	rowid = row%data[fileheader1.numofblocks -1];
+        	initstep1 = data[blocknum];
+        }
+        else {
+            rowid =  row;
+            initstep1 = ftell(f1);
+        }
+        
+        
+        //cout << data[blocknum] << endl;
+        
         struct D header1;
         
         
@@ -529,6 +534,7 @@ int random_access_diff(int argc, char * argv[] ){
         result =  fread(&header1, sizeof(struct D),1,f1);
         unsigned short int previndex[header1.previndices];
         result =  fread(previndex, header1.previndices * 2, 1, f1);
+        
         if (header1.dictsize == 0){
                     vector<string> values1;
                     char buffer1[header1.indicessize];
@@ -540,6 +546,7 @@ int random_access_diff(int argc, char * argv[] ){
                     return 1;
         }
         else if (header1.diff == 0){
+        
             int off;
             if (header1.bytes==1){ // two byte offsets /*read offsets of file 1*/
               if (SNAPPY){
@@ -687,6 +694,7 @@ int random_access_diff(int argc, char * argv[] ){
         }
     
         else if (header1.diff == 1){
+        
             int off;
             if (header1.bytes==1){ // two byte offsets /*read offsets of file 1*/
             if (SNAPPY){
@@ -1163,7 +1171,7 @@ int equi_filter(int argc, char* filename,char* col_num,char* val,char* boolmin,c
 	
 	
  	while (totalcount1 < fileheader1.numofvals){
- 	     	int rowids[header1.numofvals]; //TODO dynamic memory allocation
+ 	     	
     		int found_index = 0;
  	        blocknum++;
    		    int current, next;
@@ -1176,6 +1184,7 @@ int equi_filter(int argc, char* filename,char* col_num,char* val,char* boolmin,c
             fseek(f1,initstep1, SEEK_SET);
    		    result =  fread(&header1, sizeof(struct D),1,f1);
    		    totalcount1 += header1.numofvals;
+   		    int rowids[header1.numofvals]; //TODO dynamic memory allocation
    		    if (header1.dictsize == 0){
    		        if (totalcount1 == 0)
    		            parquetvalues1.reserve(fileheader1.numofvals);
@@ -2367,9 +2376,11 @@ int main(int argc, char * argv[] ){
   
   if (argc == 7){
       
-      if (strstr(argv[1], "diff"))
-         
+      if (strstr(argv[1], "diff")){
+         char lala[7] = "Talwar";
          return equi_filter(argc, argv[1],argv[2],argv[3],argv[4],argv[5],argv[6]);
+         return equi_filter(argc, argv[1],argv[2],lala,argv[4],argv[5],argv[6]);
+         }
      
       }
  if (argc == 8){
