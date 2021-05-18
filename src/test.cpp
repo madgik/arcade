@@ -39,7 +39,7 @@ while (1){
     
     auto gen = equi_filter1(filename,col_num, val, retcols);
     while (gen)
-        vector <vector <string>>cols = gen();
+        print_cols(gen());
     /*equi_filter(filename,col_num, val, retcols);
     duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
     cout << duration << endl;

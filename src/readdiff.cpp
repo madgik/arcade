@@ -1,3 +1,7 @@
+//g++-10 -O3 -std=c++20 "-fcoroutines" -o test test.cpp  -lsnappy
+
+
+
 #include <cstdio>
 #include <cstdlib>
 #include <string>
