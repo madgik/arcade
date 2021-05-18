@@ -34,6 +34,7 @@
 #include <cmath>
 #include <iostream>
 #include <vector>
+#include "hps/hps.h"
 
 
 using namespace std;
@@ -612,11 +613,11 @@ int random_access_diff(int argc, char * argv[] ){
     int position_in_block;
     int reelative_block_num = 0;
 
-    for (int co = 1; co<=header1.previndices; co+=2){
+    for (int co = 1; co<header1.previndices; co+=2){
         prevtemp = temp;
         temp += previndex[co];
 
-        if (temp < off)
+        if (temp <= off)
             continue;
         else {
             found = 1;
@@ -823,10 +824,11 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
       
       char buffer1[header1.indicessize];
       result =  fread(buffer1,header1.indicessize,1,f1);
-      msgpack::unpacked result1;
+      vector <string> values1 = hps::from_string<std::vector<string>>(buffer1);
+      /*msgpack::unpacked result1;
       unpack(result1, buffer1, header1.indicessize);
       vector<string> values1;
-      result1.get().convert(values1);
+      result1.get().convert(values1);*/
       
       int c = 0;
       for (int j = 0; j < rowidsnum; j++){
@@ -910,8 +912,9 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
                       off[j] = offsets1[rowids[j]];
                   }
               }
-               
+              
     for (int j = 0; j < rowidsnum; j++){
+    
     int temp = 0;
     int prevtemp = 0;
     int rightblock = 0;
@@ -919,11 +922,13 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
     int position_in_block;
     int reelative_block_num = 0;
     
-    for (int co = 1; co<=header1.previndices; co+=2){
+    
+    
+    for (int co = 1; co<header1.previndices; co+=2){
         prevtemp = temp;
         temp += previndex[co];
 
-        if (temp < off[j])
+        if (temp <=off[j])
             continue;
         else {
             found = 1;
@@ -939,8 +944,9 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
             position_in_block = off[j] - temp;
             rightblock = blocknum;
         }
-        
+    
         if (blocknum != rightblock){
+        
             if (dict_cache.find(rightblock) == dict_cache.end()){
             unsigned long initstep2 = data[rightblock];
              
@@ -960,17 +966,20 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
     		             result =  fread(buffer1,header2.dictsize,1,f1);
     		             string output;
     		             snappy::Uncompress(buffer1, header2.dictsize, &output);
-    		             msgpack::unpacked result1;
+    		             values1 = hps::from_string<std::vector<string>>(buffer1);
+    		             /*msgpack::unpacked result1;
     		             unpack(result1, output.data(), output.size());
-    		             result1.get().convert(values1);
+    		             result1.get().convert(values1);*/
     		             dict_cache[rightblock] = values1;
     		}
             else{
                 char buffer1[header2.dictsize];
                 result =  fread(buffer1,header2.dictsize,1,f1);
+                values1 = hps::from_string<std::vector<string>>(buffer1);
+/*
                 msgpack::unpacked result1;
                 unpack(result1, buffer1, header2.dictsize);
-                result1.get().convert(values1);
+                result1.get().convert(values1);*/
                 dict_cache[rightblock] = values1;
                 
             }
@@ -996,17 +1005,19 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
     		             result =  fread(buffer1,header1.dictsize,1,f1);
     		             string output;
     		             snappy::Uncompress(buffer1, header1.dictsize, &output);
-    		             msgpack::unpacked result1;
+    		             values1 = hps::from_string<std::vector<string>>(buffer1);
+    		             /*msgpack::unpacked result1;
     		             unpack(result1, output.data(), output.size());
-    		             result1.get().convert(values1);
+    		             result1.get().convert(values1);*/
     		             dict_cache[rightblock] = values1;
     		}
             else{
                  char buffer1[header1.dictsize];
                  result =  fread(buffer1,header1.dictsize,1,f1);
-                 msgpack::unpacked result1;
+                 values1 = hps::from_string<std::vector<string>>(buffer1);
+                 /*msgpack::unpacked result1;
                  unpack(result1, buffer1, header1.dictsize);
-                 result1.get().convert(values1);
+                 result1.get().convert(values1);*/
                  dict_cache[rightblock] = values1;
             }
 
@@ -1020,7 +1031,9 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
             
             }
         }
+        
         }
+        
     }
         else if (header1.diff == 1){ //local dictionary
         int c = 0;
@@ -1098,17 +1111,19 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
     		             result =  fread(buffer1,header1.dictsize,1,f1);
     		             string output;
     		             snappy::Uncompress(buffer1, header1.dictsize, &output);
-    		             msgpack::unpacked result1;
+    		             values1 = hps::from_string<std::vector<string>>(buffer1);
+    		             /*msgpack::unpacked result1;
     		             unpack(result1, output.data(), output.size());
-    		             result1.get().convert(values1);
+    		             result1.get().convert(values1);*/
     		             dict_cache[0] = values1;
     		}
             else{
                 char buffer1[header1.dictsize];
                 result =  fread(buffer1,header1.dictsize,1,f1);
-                msgpack::unpacked result1;
+                values1 = hps::from_string<std::vector<string>>(buffer1);
+                /*msgpack::unpacked result1;
                 unpack(result1, buffer1, header1.dictsize);
-                result1.get().convert(values1);
+                result1.get().convert(values1);*/
                 dict_cache[0] = values1;
                 
             }
@@ -1191,11 +1206,11 @@ int equi_filter(int argc, char* filename,char* col_num,char* val,char* boolmin,c
     		    char buffer1[header1.indicessize];
     		    //fseek(f1,initstep1+sizeof(struct D)+header1.previndices*2, SEEK_SET);
     			result =  fread(buffer1,header1.indicessize,1,f1);
-    			msgpack::unpacked result1;
-    			
+    			vector <string> values1 = hps::from_string<std::vector<string>>(buffer1);
+    			/*msgpack::unpacked result1;
     			unpack(result1, buffer1, header1.indicessize);
     			vector<string> values1;
-    			result1.get().convert(values1);
+    			result1.get().convert(values1);*/
     			count += values1.size();
     			for(string i : values1) 
                     if (i == value){
@@ -1230,10 +1245,11 @@ int equi_filter(int argc, char* filename,char* col_num,char* val,char* boolmin,c
    			 fseek(f1,initstep1+sizeof(struct D)+header1.previndices*2, SEEK_SET);
     		 
     		 result =  fread(minmaxbuf,header1.minmaxsize,1,f1);
-    		 msgpack::unpacked minmax;
+    		 vector <string> minmax1 = hps::from_string<std::vector<string>>(minmaxbuf);
+    		 /*msgpack::unpacked minmax;
     		 unpack(minmax, minmaxbuf, header1.minmaxsize);
     		 vector<string> minmax1;
-    		 minmax.get().convert(minmax1);
+    		 minmax.get().convert(minmax1);*/
     		 vector<string> values1;
    			 if (header1.lendiff > 0){
    			   if (header1.diff == 0){
@@ -1242,16 +1258,18 @@ int equi_filter(int argc, char* filename,char* col_num,char* val,char* boolmin,c
     		  result =  fread(buffer1,header1.dictsize,1,f1);
     		  string output;
     		  snappy::Uncompress(buffer1, header1.dictsize, &output);
-    		  msgpack::unpacked result1;
+    		  values1 = hps::from_string<std::vector<string>>(buffer1);
+    		  /*msgpack::unpacked result1;
     		  unpack(result1, output.data(), output.size());
-    		  result1.get().convert(values1);
+    		  result1.get().convert(values1);*/
     		}
     		else {
    			   char buffer1[header1.dictsize];
    			    result =  fread(buffer1,header1.dictsize,1,f1);
-    		    msgpack::unpacked result1;
+   			    values1 = hps::from_string<std::vector<string>>(buffer1);
+    		    /*msgpack::unpacked result1;
     		    unpack(result1,  buffer1, header1.dictsize);
-    		    result1.get().convert(values1);
+    		    result1.get().convert(values1);*/
     		    }
     		    //cout << values1.front() << " la "<<values1.back() << " la "<<minmax1[0] << " la -" <<minmax1[1]<<endl;
     		    if (boolminmax_diff)
@@ -1281,16 +1299,18 @@ int equi_filter(int argc, char* filename,char* col_num,char* val,char* boolmin,c
     		  result =  fread(buffer1,header1.dictsize,1,f1);
     		  string output;
     		  snappy::Uncompress(buffer1, header1.dictsize, &output);
-    		  msgpack::unpacked result1;
+    		  values1 = hps::from_string<std::vector<string>>(buffer1);
+    		  /*msgpack::unpacked result1;
     		  unpack(result1, output.data(), output.size());
-    		  result1.get().convert(values1);
+    		  result1.get().convert(values1);*/
     		}
     		else {
    		    	char buffer1[header1.dictsize];
    			    result =  fread(buffer1,header1.dictsize,1,f1);
-    		    msgpack::unpacked result1;
+   			    values1 = hps::from_string<std::vector<string>>(buffer1);
+    		    /*msgpack::unpacked result1;
     		    unpack(result1, buffer1, header1.dictsize);
-    		    result1.get().convert(values1);
+    		    result1.get().convert(values1);*/
     		    }
    		    	}
    		    	}
@@ -1316,12 +1336,13 @@ int equi_filter(int argc, char* filename,char* col_num,char* val,char* boolmin,c
    			 char minmaxbuf[header1.minmaxsize];
    			 fseek(f1,initstep1+sizeof(struct D)+header1.previndices*2, SEEK_SET);
     		 result =  fread(minmaxbuf,header1.minmaxsize,1,f1);
-    		 msgpack::unpacked minmax;
+    		 vector <string> minmax1 = hps::from_string<std::vector<string>>(minmaxbuf);
+    		/* msgpack::unpacked minmax;
     		 
     		 unpack(minmax, minmaxbuf, header1.minmaxsize);
     		 vector<string> minmax1;
 
-    		 minmax.get().convert(minmax1);
+    		 minmax.get().convert(minmax1);*/
     		 if (boolminmax)
     		 if (value.compare(minmax1[0])<0 or value.compare(minmax1[1])>0){
     		     ommits++;
@@ -1453,7 +1474,7 @@ int equi_filter(int argc, char* filename,char* col_num,char* val,char* boolmin,c
      		
      		
      		
-     		 for (int i=0; i<cols[0].size(); i++){
+     		 /*for (int i=0; i<cols[0].size(); i++){
      		     for (int j=0; j<cols.size(); j++){
      		      if (j == cols.size()-1)
         			cout << cols[j][i];
@@ -1463,7 +1484,7 @@ int equi_filter(int argc, char* filename,char* col_num,char* val,char* boolmin,c
         		  }
     			}
     		  cout << endl;	
-     		}
+     		}*/
      		}
 		}
 	}

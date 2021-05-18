@@ -2,7 +2,7 @@
 #include <cstdlib>
 #include <string>
 #include <vector>
-#include <msgpack.hpp>
+//#include <msgpack.hpp>
 #include <iostream>
 #include <numeric>      // std::iota
 #include <algorithm>
@@ -20,7 +20,7 @@
 #include <string>
 #include <fstream>
 #include "bloom/bloom_filter.hpp"
-//#include "hps/hps.h"
+#include "hps/hps.h"
 
 using namespace std;
 int BLOCKSIZE = 65535;
@@ -50,7 +50,7 @@ struct rec {
 unsigned long global_dict_memory = 0;
 
 int permanent_decision = 1;
-double duration = 0.0;
+
 double duration5 = 0.0;
 
 static char gDelimiter = ',';
@@ -62,14 +62,14 @@ vector <int> extractattributes(std::string s) {
   stringstream input_stringstream(s);
   
   while (getline(input_stringstream,parsed,',')){
+     cout << parsed << endl;
      columns.push_back(stoi(parsed));
 }  
   return columns;
 }
 
 vector<std::string> extractColumn(vector<std::string> dataset, uint64_t colIndex) {
-  double start = std::clock();
-    
+
   vector<std::string> column(dataset.size());
   for (int i=0; i < dataset.size(); i++){
       	uint64_t col = 0;
@@ -83,8 +83,9 @@ vector<std::string> extractColumn(vector<std::string> dataset, uint64_t colIndex
     		++col;
   		}
   		column[i] = (col == colIndex ? dataset[i].substr(start, end - start) : "");
+  		
   }
-  duration += ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
+  
   return column;
 }
 
@@ -278,18 +279,14 @@ int compress_batch(vector <string> vals, FILE *f1, bloom_filter *filter, bool &i
     		sizediff.clear();
     		diffvals.clear();
     		lookup.clear();
-            //string stmm = hps::to_string(minmax);
-    		std::stringstream buffermm;
+            string stmm = hps::to_string(minmax);
+    		/*std::stringstream buffermm;
     		msgpack::pack(buffermm, minmax);
     		
-    		string stmm = buffermm.str();
+    		string stmm = buffermm.str();*/
     		header.minmaxsize = 0;//stmm.size();
 
-            //string st = hps::to_string(vals);
-            std::stringstream buffer;
-            msgpack::pack(buffer, vals);
-            string st = buffer.str();
-             
+            string st = hps::to_string(vals);
             header.indicessize = st.size();
     		header.lendiff = 0;
 
@@ -338,11 +335,11 @@ if (permanent_decision == 1){
     else if (globdsize > 0 and diff.size()*1.0/distinct_count > 0.99)  diffdict = 0;
     
     else if ((globdsize>=256 and distinct_count < 256) or (globdsize >= 65536 and distinct_count < 65536)  or  (globdsize < 256 and (globdsize + diff.size()) > 255) or ( globaldict.size() < 65536 and (globdsize + diff.size()) > 65535)){
-        //st = hps::to_string(diff);
-        std::stringstream buffer;
+        st = hps::to_string(diff);
+        /*std::stringstream buffer;
         msgpack::pack(buffer, diff);
         st = buffer.str();
-        
+        */
         int diffdictdump = st.size();
         int diffcount = sizediff.size(); 
         int diffavg = 0;
@@ -361,11 +358,11 @@ if (permanent_decision == 1){
         else if (globdsize+diff.size() < 65536) diffs= 2;
         else diffs = 4;
         
-        //stloc = hps::to_string(vec);
-        std::stringstream buffer5;
+        stloc = hps::to_string(vec);
+        /*std::stringstream buffer5;
         msgpack::pack(buffer5, vec);
         stloc = buffer5.str();
-        
+        */
         int sizelocal = stloc.size() + lenvals3*locs;
         int sizeofdiff = diffdictdump + lenvals3*diffs;
         
@@ -390,7 +387,7 @@ if (permanent_decision == 1){
 else diffdict = 0; //to demostrate the ram cpu compression trade-offs. 
 //diffdict = 1;
 duration5 += ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
-    
+    cout << duration5 << endl;
 
 if (diffdict == 1){
     
@@ -414,21 +411,24 @@ if (diffdict == 1){
     for(size_t index = globdsize; index < globaldict.size(); ++index)
         lookup[globaldict[index]] = index;
         
-    
-    
-    //string stmm = hps::to_string(minmax);
-    std::stringstream buffermm;
-    msgpack::pack(buffermm, minmax);
-    string stmm = buffermm.str();
-    header.minmaxsize = stmm.size();
 
+    string stmm = hps::to_string(minmax);
+    /*std::stringstream buffermm;
+    msgpack::pack(buffermm, minmax);
+    string stmm = buffermm.str();*/
+    header.minmaxsize = stmm.size();
+    
+    /*char resp[2000];
+    std::copy(stmm.begin(), stmm.end(), std::begin(resp));
+    std::replace(std::begin(resp), std::begin(resp) + stmm.size(), '\0', ' ');
+    printf("%s\n",resp);*/
     
     if (st==""){
-        //st = hps::to_string(diff);
-        std::stringstream buffer;
+        st = hps::to_string(diff);
+        /*std::stringstream buffer;
         msgpack::pack(buffer, diff);
         st = buffer.str();
-        }
+        */}
         
     header.dictsize = st.size();
     global_dict_memory +=  header.dictsize;
@@ -524,19 +524,19 @@ else if (diffdict == 0){
     for(size_t index = 0; index < vec.size(); ++index)
         lookup[vec[index]] = index;
 
-    //string stmm = hps::to_string(minmax);
-    std::stringstream buffermm;
+    string stmm = hps::to_string(minmax);
+    /*std::stringstream buffermm;
     msgpack::pack(buffermm, minmax);
-    string stmm = buffermm.str();
+    string stmm = buffermm.str();*/
     header.minmaxsize = stmm.size();
 
     
     if (stloc==""){
-        //stloc = hps::to_string(vec);
-        std::stringstream buffer;
+        stloc = hps::to_string(vec);
+        /*std::stringstream buffer;
         msgpack::pack(buffer, vec);
         stloc = buffer.str();
-    }
+    */}
     header.dictsize = stloc.size();
     global_dict_memory +=  header.dictsize;
     header.lendiff = distinct_count;
@@ -627,7 +627,7 @@ int compress(char* infile, char* outfile, int numofvals, char* attributes){
     std::string input;
     input = infile;
     std::clock_t start;
-    
+    double duration;
     
     std::ifstream finput(input.c_str());
     
