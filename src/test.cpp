@@ -29,6 +29,12 @@ char* filename = new char[100];
 int col_num;
 char* val = new char[200];
 char* retcols = new char[65536*2];
+unordered_map<long int, vector <string>> values_cache;
+unordered_map<long int, unsigned short* > short_offsets_cache;  
+unordered_map<long int, unsigned int* > int_offsets_cache;
+unordered_map<long int, unsigned char* > char_offsets_cache;
+
+
 
 while (1){
     cin >> filename >> col_num >> val >> retcols;
@@ -36,7 +42,7 @@ while (1){
     double duration = 0.0;
     std::clock_t start = std::clock();
     vector <vector <string>> cols;
-    auto gen = equi_filter(filename,col_num, val, retcols);
+    auto gen = equi_filter(filename,col_num, val, retcols,values_cache,short_offsets_cache,int_offsets_cache,char_offsets_cache);
     while (gen)
         cols = gen();
         //print_columns(gen());
