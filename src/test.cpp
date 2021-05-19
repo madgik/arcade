@@ -1,4 +1,4 @@
-#include "readdiff.cpp"
+#include "reader.h"
 #include <cstdio>
 #include <cstdlib>
 #include <string>
@@ -30,16 +30,16 @@ int col_num;
 char* val = new char[200];
 char* retcols = new char[65536*2];
 
-
 while (1){
     cin >> filename >> col_num >> val >> retcols;
     //vector <vector <string>> cols;
     double duration = 0.0;
     std::clock_t start = std::clock();
-    
-    auto gen = equi_filter1(filename,col_num, val, retcols);
+    vector <vector <string>> cols;
+    auto gen = equi_filter(filename,col_num, val, retcols);
     while (gen)
-        print_cols(gen());
+        cols = gen();
+        //print_columns(gen());
     /*equi_filter(filename,col_num, val, retcols);
     duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
     cout << duration << endl;
@@ -47,10 +47,7 @@ while (1){
     equi_filter(filename,col_num, val, retcols);*/
     duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
     cout << duration << endl;
-    
     //;
-
-
 }
 
 return 1;

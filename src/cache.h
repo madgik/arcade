@@ -11,16 +11,19 @@ using namespace std;
 
 class LRUCache {
 	// store keys of cache
+	list<int> dq1;
 	list<int> dq;
-
+	int ind=0;
 	// store references of key in cache
-	unordered_map<int, list<int>::iterator> ma;
+	unordered_map<int, vector <string>> ma1;
+	unordered_map<long int, int> ma;
 	int csize; // maximum capacity of cache
 
 public:
 	LRUCache(int);
-	void refer(int);
-	void display();
+	void refer(int, vector <string>);
+	int  get(int x, vector <string> (&));
+
 };
 
 // Declare the size
@@ -30,7 +33,7 @@ LRUCache::LRUCache(int n)
 }
 
 // Refers key x with in the LRU cache
-void LRUCache::refer(int x)
+void LRUCache::refer(int x, vector <string> buffer)
 {
 	// not present in cache
 	if (ma.find(x) == ma.end()) {
@@ -38,36 +41,31 @@ void LRUCache::refer(int x)
 		if (dq.size() == csize) {
 			// delete least recently used element
 			int last = dq.back();
-
-			// Pops the last elmeent
+			int last2 = dq1.back();
+			// Pops the last element
 			dq.pop_back();
-
+			dq1.pop_back();
 			// Erase the last
 			ma.erase(last);
+			ma1.erase(last2);
 		}
-	}
-
-	// present in cache
-	else
-		dq.erase(ma[x]);
-
-	// update reference
-	dq.push_front(x);
-	ma[x] = dq.begin();
+		dq.push_front(x);
+		int last = dq.back();
+		ma[x] = dq1[0];
+	    ma1[ma[x]] = buffer;
+	}	
 }
 
-// Function to display contents of cache
-void LRUCache::display()
+
+int LRUCache::get(int x, vector <string> (&buf))
 {
-
-	// Iterate in the deque and print
-	// all the elements in it
-	for (auto it = dq.begin(); it != dq.end();
-		it++)
-		cout << (*it) << " ";
-
-	cout << endl;
+	if (ma.find(x) == ma.end())
+	    return -1;
+	buf = ma1[ma[x]];
+	return 0;
+	 
 }
+
 
 
 
