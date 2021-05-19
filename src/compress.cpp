@@ -316,8 +316,8 @@ minmax[2] = diff[0];
 minmax[3] = diff[diff.size()-1];
 }
 else{
-minmax[2] = "";
-minmax[3] = "";
+minmax[2] = " ";
+minmax[3] = " ";
 }
 
 string st = "";
@@ -385,7 +385,7 @@ if (permanent_decision == 1){
     }
 }
 else diffdict = 0; //to demostrate the ram cpu compression trade-offs. 
-//diffdict = 1;
+diffdict = 1;
 duration5 += ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
     cout << duration5 << endl;
 
@@ -410,7 +410,9 @@ if (diffdict == 1){
     
     for(size_t index = globdsize; index < globaldict.size(); ++index)
         lookup[globaldict[index]] = index;
-        
+    
+    /*if (blocknum == 14 or blocknum == 13 or blocknum == 15)
+        cout << minmax[0] << " " << minmax[1] << " "  << minmax[2] << " " << minmax[3] << endl;*/
 
     string stmm = hps::to_string(minmax);
     /*std::stringstream buffermm;

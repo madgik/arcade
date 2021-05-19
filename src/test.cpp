@@ -27,6 +27,7 @@
 int main(){
 char* filename = new char[100];
 int col_num;
+int count_rows;
 char* val = new char[200];
 char* retcols = new char[65536*2];
 unordered_map<long int, vector <string>> values_cache;
@@ -43,8 +44,13 @@ while (1){
     std::clock_t start = std::clock();
     vector <vector <string>> cols;
     auto gen = equi_filter(filename,col_num, val, retcols,values_cache,short_offsets_cache,int_offsets_cache,char_offsets_cache);
-    while (gen)
+    count_rows = 0;
+    while (gen){
         cols = gen();
+        if (cols.size() > 0) count_rows += cols[0].size();
+    }
+    cout << count_rows << endl;
+        
         //print_columns(gen());
     /*equi_filter(filename,col_num, val, retcols);
     duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
