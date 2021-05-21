@@ -36,7 +36,6 @@ unordered_map<long int, unsigned int* > int_offsets_cache;
 unordered_map<long int, unsigned char* > char_offsets_cache;
 
 
-
 while (1){
     cin >> filename >> col_num >> val >> retcols;
     //vector <vector <string>> cols;

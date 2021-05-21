@@ -3,8 +3,6 @@
 int SNAPPY = 0;
 size_t result;
 
-
-
 vector <int> extractattributes(std::string s) {
   vector <int> columns;
   string parsed;
@@ -36,7 +34,6 @@ unordered_map<long int, unsigned char* > &char_offsets_cache){
       }
     return 1;
 }
-
 
 
 vector<string>* get_values(FILE *f1, long int position, int dictsize, unordered_map<long int, vector <string>> &values_cache,
@@ -145,7 +142,7 @@ unordered_map<long int, unsigned char* > &char_offsets_cache){
     off[j] = offsets1[rowids[j]];
 */
 
-int get_column_value(FILE *f1,vector <vector <string>> &cols, int blocknum, long int blockstart, struct fileH fileheader1, struct D header1, vector <int> columns, int* rowids, int rowidsnum, int join1, vector <string> &vec, long* data, unordered_map <int, vector <string>> &dict_cache,
+int get_column_value(FILE *f1,vector <vector <string>> &cols, int blocknum, long int blockstart, struct fileH fileheader1, struct D header1, vector <int> columns, int* rowids, int rowidsnum, int join1, vector <string> &vec, long* data, unordered_map <int, vector <string>*> &dict_cache,
 unordered_map<long int, vector <string>> &values_cache,
 unordered_map<long int, unsigned short* > &short_offsets_cache,  
 unordered_map<long int, unsigned int* > &int_offsets_cache,
@@ -250,8 +247,6 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
         }
     }
     
-      
-       
         if (found == 0){
             position_in_block = off[j] - temp;
             rightblock = blocknum;
@@ -272,14 +267,13 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
             result =  fread(&header2, sizeof(struct D),1,f1);
             
             
-            vector<string> *values1 = get_values(f1,initstep2+sizeof(struct D)+header2.minmaxsize+ header2.previndices*2,   header2.dictsize, values_cache,short_offsets_cache,int_offsets_cache,char_offsets_cache);
-            dict_cache[rightblock] = *values1;
-            cols[colnum][c] = (*values1)[position_in_block];
+            dict_cache[rightblock] = get_values(f1,initstep2+sizeof(struct D)+header2.minmaxsize+ header2.previndices*2,   header2.dictsize, values_cache,short_offsets_cache,int_offsets_cache,char_offsets_cache);
+            cols[colnum][c] = (*dict_cache[rightblock])[position_in_block];
             //cout << values1[position_in_block] << endl;
             c++;
            }
            else {
-           cols[colnum][c] = dict_cache[rightblock][position_in_block];
+           cols[colnum][c] = (*dict_cache[rightblock])[position_in_block];
             //cout << values1[position_in_block] << endl;
             c++;
            }
@@ -287,14 +281,12 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
         }
         else {
             if (dict_cache.find(rightblock) == dict_cache.end()){
-            vector<string> *values1 = get_values(f1,initstep1+sizeof(struct D)+header1.minmaxsize+ header1.previndices*2, header1.dictsize,values_cache,short_offsets_cache,int_offsets_cache,char_offsets_cache);
-            dict_cache[rightblock] = *values1;
-            cols[colnum][c] = (*values1)[position_in_block];
+            dict_cache[rightblock] = get_values(f1,initstep1+sizeof(struct D)+header1.minmaxsize+ header1.previndices*2, header1.dictsize,values_cache,short_offsets_cache,int_offsets_cache,char_offsets_cache);
+            cols[colnum][c] = (*dict_cache[rightblock])[position_in_block];
             c++;
             }
             else {
-                
-                cols[colnum][c] = dict_cache[rightblock][position_in_block];
+                cols[colnum][c] = (*dict_cache[rightblock])[position_in_block];
                 c++;
             
             }
@@ -331,10 +323,9 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
             
             
             
-            vector<string> *values1 = get_values(f1,initstep1+sizeof(struct D)+header1.minmaxsize+ header1.previndices*2, header1.dictsize, values_cache,short_offsets_cache,int_offsets_cache,char_offsets_cache);
-            dict_cache[0] = *values1;
+            dict_cache[0] = get_values(f1,initstep1+sizeof(struct D)+header1.minmaxsize+ header1.previndices*2, header1.dictsize, values_cache,short_offsets_cache,int_offsets_cache,char_offsets_cache);
             for (int j = 0; j < rowidsnum; j++){
-                cols[colnum][c] = (*values1)[off[j]];
+                cols[colnum][c] = (*dict_cache[0])[off[j]];
                 c++;
             //cout << values1[off] << endl;
             
@@ -346,7 +337,7 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
 return 1;
 }
 
-vector<vector<string>> filter_page(FILE *f1, int &blocknum, unsigned long &initstep1, int join1, struct fileH fileheader1, int &totalcount1, string value, vector <int> retcolumns, unordered_map <int, vector <string>> &dict_cache, int &global_len, int &offset, long* (&data),
+vector<vector<string>> filter_page(FILE *f1, int &blocknum, unsigned long &initstep1, int join1, struct fileH fileheader1, int &totalcount1, string value, vector <int> retcolumns, unordered_map <int, vector <string>*> &dict_cache, int &global_len, int &offset, long* (&data),
 unordered_map<long int, vector <string>> &values_cache,
 unordered_map<long int, unsigned short* > &short_offsets_cache,  
 unordered_map<long int, unsigned int* > &int_offsets_cache,
@@ -560,7 +551,7 @@ unordered_map<long int, unsigned short* > &short_offsets_cache,
 unordered_map<long int, unsigned int* > &int_offsets_cache,
 unordered_map<long int, unsigned char* > &char_offsets_cache ){
 
-    unordered_map <int, vector <string>> dict_cache;
+    unordered_map <int, vector <string>*> dict_cache;
     
     vector <int> retcolumns = extractattributes(retcols);
     int colnum = retcolumns.size();
