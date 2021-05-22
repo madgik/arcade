@@ -484,12 +484,9 @@ unordered_map<long int, unsigned char* > &char_offsets_cache  ){
      		    initstep1 += next-current;
      		    return cols;
      		    }
-     		    
      			initstep1 += next-current;
-                
         }
         else{
-
             long int position = initstep1+sizeof(struct D)+header1.dictsize+header1.previndices*2 + header1.minmaxsize;
     		if (header1.bytes==1){ // two byte offsets /*read offsets of file 1*/
      		  unsigned short* offsets = new unsigned short [header1.numofvals];  
@@ -502,7 +499,6 @@ unordered_map<long int, unsigned char* > &char_offsets_cache  ){
      		       rowids[found_index] = i; 
      		       found_index++;
      		   }
-     		   
     		}
      		}
 
@@ -517,7 +513,6 @@ unordered_map<long int, unsigned char* > &char_offsets_cache  ){
      		       rowids[found_index] = i; 
      		       found_index++;
      		   }
-     		   
     		}
      		}
      		if (header1.bytes==2){ // one byte offsets
@@ -531,11 +526,10 @@ unordered_map<long int, unsigned char* > &char_offsets_cache  ){
      		       rowids[found_index] = i; 
      		       found_index++;
      		   }
-     		   
     		}
      		}
      		initstep1 += next-current;
-     		std::vector<string*> myvec(found_index, &value);
+     		vector<string*> myvec(found_index, &value);
      		vector <vector <string*>> cols(retcolumns.size(), std::vector<string*>(found_index));
      		get_column_value(f1,cols, blocknum, blockstart, fileheader1, header1, retcolumns, rowids, found_index, join1, myvec, data, dict_cache,values_cache,short_offsets_cache,int_offsets_cache,char_offsets_cache);
      		return cols;
