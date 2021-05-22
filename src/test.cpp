@@ -49,7 +49,7 @@ while (1){
         if (cols.size() > 0) count_rows += cols[0].size();
         //print_columns(cols);
     }
-    cout << count_rows << endl;
+   
         
         //print_columns(gen());
     /*equi_filter(filename,col_num, val, retcols);
@@ -58,7 +58,8 @@ while (1){
     start = std::clock();
     equi_filter(filename,col_num, val, retcols);*/
     duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
-    cout << duration << endl;
+    cout << endl;
+     cout << "Returned  " << count_rows << " rows in " << duration << " seconds" << endl;
     //;
 }
 

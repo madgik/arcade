@@ -167,7 +167,7 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
   int initstep;
   for (int i: columns){
     colnum++;
-    if (i == 19072998){
+    if (i == join1){
         cols[colnum] = move(vec);
     }
     else{
