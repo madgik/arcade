@@ -142,7 +142,7 @@ unordered_map<long int, unsigned char* > &char_offsets_cache){
     off[j] = offsets1[rowids[j]];
 */
 
-int get_column_value(FILE *f1,vector <vector <string>> &cols, int blocknum, long int blockstart, struct fileH fileheader1, struct D header1, vector <int> columns, int* rowids, int rowidsnum, int join1, vector <string> &vec, long* data, unordered_map <int, vector <string>*> &dict_cache,
+int get_column_value(FILE *f1,vector <vector <string*>> &cols, int blocknum, long int blockstart, struct fileH fileheader1, struct D header1, vector <int> columns, int* rowids, int rowidsnum, int join1, vector <string*> &vec, long* data, vector <unordered_map <int, vector <string>*>> &dict_cache,
 unordered_map<long int, vector <string>> &values_cache,
 unordered_map<long int, unsigned short* > &short_offsets_cache,  
 unordered_map<long int, unsigned int* > &int_offsets_cache,
@@ -167,8 +167,8 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
   int initstep;
   for (int i: columns){
     colnum++;
-    if (i == join1){
-        cols[colnum] = vec;
+    if (i == 19072998){
+        cols[colnum] = move(vec);
     }
     else{
     
@@ -188,7 +188,7 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
       vector <string> *values1 = get_values(f1,initstep+sizeof(struct D)+header1.previndices * 2,header1.indicessize,values_cache,short_offsets_cache,int_offsets_cache,char_offsets_cache);
       int c = 0;
       for (int j = 0; j < rowidsnum; j++){
-         cols[colnum][c] = (*values1)[rowids[j]];
+         cols[colnum][c] = &(*values1)[rowids[j]];
          c++;
       }
     }
@@ -254,7 +254,7 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
     
         if (blocknum != rightblock){
         
-            if (dict_cache.find(rightblock) == dict_cache.end()){
+            if (dict_cache[i].find(rightblock) == dict_cache[i].end()){
             unsigned long initstep2 = data[rightblock];
              
             struct D header2;
@@ -267,26 +267,26 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
             result =  fread(&header2, sizeof(struct D),1,f1);
             
             
-            dict_cache[rightblock] = get_values(f1,initstep2+sizeof(struct D)+header2.minmaxsize+ header2.previndices*2,   header2.dictsize, values_cache,short_offsets_cache,int_offsets_cache,char_offsets_cache);
-            cols[colnum][c] = (*dict_cache[rightblock])[position_in_block];
+            dict_cache[i][rightblock] = get_values(f1,initstep2+sizeof(struct D)+header2.minmaxsize+ header2.previndices*2,   header2.dictsize, values_cache,short_offsets_cache,int_offsets_cache,char_offsets_cache);
+            cols[colnum][c] = &(*dict_cache[i][rightblock])[position_in_block];
             //cout << values1[position_in_block] << endl;
             c++;
            }
            else {
-           cols[colnum][c] = (*dict_cache[rightblock])[position_in_block];
+           cols[colnum][c] = &(*dict_cache[i][rightblock])[position_in_block];
             //cout << values1[position_in_block] << endl;
             c++;
            }
             
         }
         else {
-            if (dict_cache.find(rightblock) == dict_cache.end()){
-            dict_cache[rightblock] = get_values(f1,initstep1+sizeof(struct D)+header1.minmaxsize+ header1.previndices*2, header1.dictsize,values_cache,short_offsets_cache,int_offsets_cache,char_offsets_cache);
-            cols[colnum][c] = (*dict_cache[rightblock])[position_in_block];
+            if (dict_cache[i].find(rightblock) == dict_cache[i].end()){
+            dict_cache[i][rightblock] = get_values(f1,initstep1+sizeof(struct D)+header1.minmaxsize+ header1.previndices*2, header1.dictsize,values_cache,short_offsets_cache,int_offsets_cache,char_offsets_cache);
+            cols[colnum][c] = &(*dict_cache[i][rightblock])[position_in_block];
             c++;
             }
             else {
-                cols[colnum][c] = (*dict_cache[rightblock])[position_in_block];
+                cols[colnum][c] = &(*dict_cache[i][rightblock])[position_in_block];
                 c++;
             
             }
@@ -323,9 +323,9 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
             
             
             
-            dict_cache[0] = get_values(f1,initstep1+sizeof(struct D)+header1.minmaxsize+ header1.previndices*2, header1.dictsize, values_cache,short_offsets_cache,int_offsets_cache,char_offsets_cache);
+            dict_cache[i][0] = get_values(f1,initstep1+sizeof(struct D)+header1.minmaxsize+ header1.previndices*2, header1.dictsize, values_cache,short_offsets_cache,int_offsets_cache,char_offsets_cache);
             for (int j = 0; j < rowidsnum; j++){
-                cols[colnum][c] = (*dict_cache[0])[off[j]];
+                cols[colnum][c] = &(*dict_cache[i][0])[off[j]];
                 c++;
             //cout << values1[off] << endl;
             
@@ -337,7 +337,7 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
 return 1;
 }
 
-vector<vector<string>> filter_page(FILE *f1, int &blocknum, unsigned long &initstep1, int join1, struct fileH fileheader1, int &totalcount1, string value, vector <int> retcolumns, unordered_map <int, vector <string>*> &dict_cache, int &global_len, int &offset, long* (&data),
+vector<vector<string*>> filter_page(FILE *f1, int &blocknum, unsigned long &initstep1, int join1, struct fileH fileheader1, int &totalcount1, string value, vector <int> retcolumns, vector <unordered_map <int, vector <string>*>> &dict_cache, int &global_len, int &offset, long* (&data),
 unordered_map<long int, vector <string>> &values_cache,
 unordered_map<long int, unsigned short* > &short_offsets_cache,  
 unordered_map<long int, unsigned int* > &int_offsets_cache,
@@ -373,8 +373,8 @@ unordered_map<long int, unsigned char* > &char_offsets_cache  ){
                       found_index++;
                       
     			//parquetvalues1.insert( parquetvalues1.end(), values1.begin(), values1.end() );
-    			std::vector<string> myvec(found_index, value);
-    			vector <vector <string>> cols(retcolumns.size(), std::vector<string>(found_index));
+    			std::vector<string*> myvec(found_index, &value);
+    			vector <vector <string*>> cols(retcolumns.size(), std::vector<string*>(found_index));
      		    get_column_value(f1, cols, blocknum, blockstart, fileheader1, header1, retcolumns, rowids, found_index, join1, myvec, data, dict_cache,values_cache,short_offsets_cache,int_offsets_cache,char_offsets_cache);
 
    				//totalcount1 += header1.numofvals;
@@ -404,7 +404,7 @@ unordered_map<long int, unsigned char* > &char_offsets_cache  ){
    		      		//global_len = global_len + header1.lendiff;
    		      		initstep1 += next-current;
    		      		offset = -1;
-   		      	vector <vector <string>> cols; 
+   		      	vector <vector <string*>> cols; 
    		      	return cols;
    		    	} 
    		    }
@@ -415,7 +415,7 @@ unordered_map<long int, unsigned char* > &char_offsets_cache  ){
    		      		initstep1 += next-current;
    		      		offset = -1;
 
-   		      	vector <vector <string>> cols; 
+   		      	vector <vector <string*>> cols; 
    		      	return cols;
    		    	}
    		    	else {
@@ -438,7 +438,7 @@ unordered_map<long int, unsigned char* > &char_offsets_cache  ){
                 //if (header1.lendiff == 0)
                     
                 initstep1 += next-current;
-                vector <vector <string>> cols; 
+                vector <vector <string*>> cols; 
    		      	return cols;
              }
    			}
@@ -462,7 +462,7 @@ unordered_map<long int, unsigned char* > &char_offsets_cache  ){
     		 if (value.compare(minmax1[0])<0 or value.compare(minmax1[1])>0){
     		     
    		      	 initstep1 += next-current;
-    		     vector <vector <string>> cols; 
+    		     vector <vector <string*>> cols; 
    		      	return cols;
     		 }
    			}
@@ -477,8 +477,8 @@ unordered_map<long int, unsigned char* > &char_offsets_cache  ){
      		        found_index++;
      		    }
      		    // TODO in this case, the full block evaluates
-     		    std::vector<string> myvec(found_index, value);
-     		    vector <vector <string>> cols(retcolumns.size(), std::vector<string>(found_index));
+     		    std::vector<string*> myvec(found_index, &value);
+     		    vector <vector <string*>> cols(retcolumns.size(), std::vector<string*>(found_index));
      		    get_column_value(f1, cols, blocknum, blockstart, fileheader1, header1, retcolumns, rowids, found_index, join1, myvec, data, dict_cache,values_cache,short_offsets_cache,int_offsets_cache,char_offsets_cache);
      		    //cols = get_column_value(f1, blocknum, blockstart, fileheader1, header1, retcolumns, col, fcount, join);
      		    initstep1 += next-current;
@@ -535,28 +535,28 @@ unordered_map<long int, unsigned char* > &char_offsets_cache  ){
     		}
      		}
      		initstep1 += next-current;
-     		std::vector<string> myvec(found_index, value);
-     		vector <vector <string>> cols(retcolumns.size(), std::vector<string>(found_index));
+     		std::vector<string*> myvec(found_index, &value);
+     		vector <vector <string*>> cols(retcolumns.size(), std::vector<string*>(found_index));
      		get_column_value(f1,cols, blocknum, blockstart, fileheader1, header1, retcolumns, rowids, found_index, join1, myvec, data, dict_cache,values_cache,short_offsets_cache,int_offsets_cache,char_offsets_cache);
      		return cols;
      		}
 		}
-	vector <vector <string>> cols;
+	vector <vector <string*>> cols;
     return cols;
 }
 
-Generator <vector<vector<string>>> equi_filter(char* filename,int col_num, char* val, char* retcols, 
+Generator <vector<vector<string*>>> equi_filter(char* filename,int col_num, char* val, char* retcols, 
 unordered_map<long int, vector <string>> &values_cache,
 unordered_map<long int, unsigned short* > &short_offsets_cache,  
 unordered_map<long int, unsigned int* > &int_offsets_cache,
 unordered_map<long int, unsigned char* > &char_offsets_cache ){
 
-    unordered_map <int, vector <string>*> dict_cache;
     
     vector <int> retcolumns = extractattributes(retcols);
     int colnum = retcolumns.size();
-    
-   
+    int max = *max_element(retcolumns.begin(), retcolumns.end());
+    vector <unordered_map <int, vector <string>*>> dict_cache(max+1);
+
     int totalcount1=0;
     FILE *f1;
     f1 = fopen(filename,"rb");
@@ -1576,14 +1576,14 @@ int read_diff_filt(int argc, char * argv[] ){
     return 0;
 }
 
-int print_columns(vector <vector <string>> cols){
+int print_columns(vector <vector <string*>> cols){
       if (cols.size()>0){
              for (int i=0; i<cols[0].size(); i++){
      		     for (int j=0; j<cols.size(); j++){
      		      if (j == cols.size()-1)
-        			cout << cols[j][i];
+        			cout << *cols[j][i];
         		  else {
-        		  cout << cols[j][i] ;
+        		  cout << *cols[j][i] ;
         		  cout << "\033[1;31m|\033[0m";
         		  }
     			}

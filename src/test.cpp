@@ -41,7 +41,7 @@ while (1){
     //vector <vector <string>> cols;
     double duration = 0.0;
     std::clock_t start = std::clock();
-    vector <vector <string>> cols;
+    vector <vector <string*>> cols;
     auto gen = equi_filter(filename,col_num, val, retcols,values_cache,short_offsets_cache,int_offsets_cache,char_offsets_cache);
     count_rows = 0;
     while (gen){
