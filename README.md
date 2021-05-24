@@ -7,16 +7,23 @@ Its first version supports string datatypes, compression, decompression, random 
 
 ## Features 
 
-- [x] String data types
-- [ ] Other datatypes (e.g., integers, floats...) 
-- [x] Equi Filters (a single equi filter at time)
-- [x] Full Materialized Scans
-- [x] Multiple random row look-up
-- [ ] Joins between compressed files
-- [ ] Range filters
-- [ ] Sort
-- [ ] Group by's
-- [ ] Aggregations
-- [ ] Multiple equi and range fiters at a time
-- [x] C API
-- [ ] Python API 
+- Data types
+    - [x] String data types
+    - [ ] Other datatypes (e.g., integers, floats...) 
+- Write Operations
+    - [x] Encode multi-column CSV files
+    - [x] Snappy Compression
+    - [ ] ZStandard Compression
+- Read Operations
+    - [x] Equi Filters (a single equi filter at time)
+    - [x] Full Materialized Scans
+    - [x] Multiple random row look-up
+    - [ ] Joins between compressed files
+    - [ ] Range filters
+    - [ ] Sort
+    - [ ] Group by's
+    - [ ] Aggregations
+    - [ ] Multiple equi and range fiters at a time
+- APIs
+  - [x] C API
+  - [ ] Python API 
