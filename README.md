@@ -15,6 +15,7 @@ Its first version supports string datatypes, compression, decompression, random 
     - [x] Snappy Compression
     - [ ] ZStandard Compression
 - Read Operations
+    - [x] Attributes projection
     - [x] Equi Filters (a single equi filter at time)
     - [x] Full Materialized Scans
     - [x] Multiple random row look-up
