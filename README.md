@@ -33,6 +33,6 @@ The following features are either implemented or will be added in next versions
 
 ## Papers
 
-- "Adaptive Compression for Fast Scans on String Columns" <br>
-Yannis Foufoulas, Lefteris Sidirourgos, Lefteris Stamatogiannakis, Yannis Ioannidis (University of Athens - MaDgIK Group) <br>
+- "Adaptive Compression for Fast Scans on String Columns", <br>
+Yannis Foufoulas, Lefteris Sidirourgos, Lefteris Stamatogiannakis, Yannis Ioannidis (University of Athens - MaDgIK Group), <br>
 In Proceedings of the 2021 ACM SIGMOD International Conference on Management of Data
