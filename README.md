@@ -32,8 +32,8 @@ The following features are either implemented or will be added in next versions
     - [ ] Range filters
     - [ ] Joins between compressed files
     - [ ] Sort
-    - [ ] Group by's
     - [ ] Aggregations
+    - [ ] Group by's
     - [ ] Multiple equi and range fiters
     - [ ] Multiple operators at a time
 - <b>Distributed features</b>
