@@ -1,6 +1,7 @@
 # Arcade
 
-Arcade is a compressed columnar file format, with an implementation of basic operations without or partial decompression.
+Arcade is a compressed columnar file format, with an implementation of basic operations without or partial decompression. 
+Its first version supports string datatypes, compression, decompression, random access, equi filters
 
 
 
@@ -9,7 +10,7 @@ Arcade is a compressed columnar file format, with an implementation of basic ope
 - [x] String data types
 - [ ] Other datatypes (e.g., integers, floats...) 
 - [x] Equi Filters (a single equi filter at time)
-- [x] Materialized Scans
+- [x] Full Materialized Scans
 - [x] Multiple random row look-up
 - [ ] Joins between compressed files
 - [ ] Range filters
