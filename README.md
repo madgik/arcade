@@ -7,6 +7,8 @@ Its first version supports string datatypes, compression, decompression, random 
 
 ## Features 
 
+The following features are either implemented or will be added in next versions
+
 - Data types
     - [x] String data types
     - [ ] Other datatypes (e.g., integers, floats...) 
