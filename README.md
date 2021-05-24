@@ -26,15 +26,16 @@ The following features are either implemented or will be added in next versions
     - [ ] ZStandard Compression
 - <b>Read Operations</b>
     - [x] Attributes projection
-    - [x] Equi Filters (a single equi filter at time)
+    - [x] Equi Filters (single equi filter at time)
     - [x] Full Materialized Scans
     - [x] Multiple random row look-up
-    - [ ] Joins between compressed files
     - [ ] Range filters
+    - [ ] Joins between compressed files
     - [ ] Sort
     - [ ] Group by's
     - [ ] Aggregations
-    - [ ] Multiple equi and range fiters at a time
+    - [ ] Multiple equi and range fiters
+    - [ ] Multiple operators at a time
 - <b>Distributed features</b>
     - [ ] Partitioning/broadcast of compressed file
     - [ ] Distributed operations (e.g., parallel scans, distributed join etc.)
