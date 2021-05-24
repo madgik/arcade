@@ -1,7 +1,7 @@
-ARCADE
+# ARCADE
 
 
-Features 
+## Features 
 
 - [x] Equi Filters (a single equi filter at time)
 - [x] Materialized Scans
