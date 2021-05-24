@@ -41,7 +41,7 @@ The following features are either implemented or will be added in next versions
   - [ ] Python API 
 - <b>Distributed features</b>
     - [ ] Partitioning/broadcast of compressed file
-    - [ ] Distributed operations (e.g., parallel scans, distributed join etc.)
+    - [ ] Distributed integration (e.g., parallel scans, distributed join etc.)
 
 ## Papers
 
