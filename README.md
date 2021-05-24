@@ -30,3 +30,9 @@ The following features are either implemented or will be added in next versions
 - APIs
   - [x] C API
   - [ ] Python API 
+
+## Papers
+
+- Adaptive Compression for Fast Scans on String Columns,
+Yannis Foufoulas, Lefteris Sidirourgos, Lefteris Stamatogiannakis, Yannis Ioannidis (University of Athens - MaDgIK Group),
+In Proceedings of the 2012 ACM SIGMOD International Conference on Management of Data
