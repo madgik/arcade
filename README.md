@@ -7,8 +7,11 @@ Its first version supports string datatypes, compression, decompression, random 
 
 ### Installation
 
-
 ### Examples
+
+#### Write
+
+#### Read
 
 ## Features 
 
