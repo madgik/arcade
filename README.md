@@ -27,6 +27,9 @@ The following features are either implemented or will be added in next versions
     - [ ] Group by's
     - [ ] Aggregations
     - [ ] Multiple equi and range fiters at a time
+- Distributed features
+    - [ ] Partitioning/broadcast of compressed file
+    - [ ] Distributed operations (e.g., parallel scans, distributed join etc.)
 - APIs
   - [x] C API
   - [ ] Python API 
