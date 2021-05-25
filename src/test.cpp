@@ -40,7 +40,7 @@ bool cont = 1;
 auto gen = equi_filter(filename,cols, col_num, val, retcols,retcolslen, cont);
 
 while (1){
-    cin >> filename >> col_num >> val >> retcols >> cont;
+    cin >> filename >> col_num >> val >> retcols;
     //vector <vector <string>> cols;
     double duration = 0.0;
     std::clock_t start = std::clock();

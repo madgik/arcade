@@ -576,7 +576,7 @@ Generator <int> equi_filter(char* filename, char*** &cols, int &col_num, char* &
   unordered_map<long int, unsigned char* > char_offsets_cache;
 
   while (cont == 1) {  
-    
+    //TODO if file changes free caches
     vector <int> retcolumns = extractattributes(retcols);
     colnum = retcolumns.size();
     int max = *max_element(retcolumns.begin(), retcolumns.end());
@@ -632,7 +632,7 @@ Generator <int> equi_filter(char* filename, char*** &cols, int &col_num, char* &
     fclose(f1);
     co_yield -1;
     }
-  
+ //TODO free caches
 }
 
 
