@@ -167,6 +167,7 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
 
 */
   
+  
   int colnum = -1;
   int initstep;
     int temp = 0;
@@ -356,6 +357,7 @@ unordered_map<long int, unsigned char* > &char_offsets_cache  ){
             fseek(f1,initstep1, SEEK_SET);
    		    result =  fread(&header1, sizeof(struct D),1,f1);
    		    totalcount1 += header1.numofvals;
+   		    //TODO if it is a count query, do not malloc rowids
    		    int* rowids = new int[header1.numofvals]; //TODO dynamic memory allocation
    		    if (header1.dictsize == 0){
    		        //if (totalcount1 == 0)
@@ -383,6 +385,7 @@ unordered_map<long int, unsigned char* > &char_offsets_cache  ){
                           cols[coln][mall] = &value[0];
                       }
                 }
+                if (retcs>0)
      		    get_column_value(f1, cols, blocknum, blockstart, fileheader1, header1, retcolumns, rowids, found_index, join1, data, dict_cache,values_cache,short_offsets_cache,int_offsets_cache,char_offsets_cache);
 
    				//totalcount1 += header1.numofvals;
@@ -497,6 +500,7 @@ unordered_map<long int, unsigned char* > &char_offsets_cache  ){
                           cols[coln][mall] = &value[0];
                       }
                 }
+                if (retcs>0)
      		    get_column_value(f1, cols, blocknum, blockstart, fileheader1, header1, retcolumns, rowids, found_index, join1,  data, dict_cache,values_cache,short_offsets_cache,int_offsets_cache,char_offsets_cache);
      		    //cols = get_column_value(f1, blocknum, blockstart, fileheader1, header1, retcolumns, col, fcount, join);
      		    initstep1 += next-current;
@@ -560,6 +564,7 @@ unordered_map<long int, unsigned char* > &char_offsets_cache  ){
                           cols[coln][mall] = &value[0];
                       }
                 }
+            if (retcs>0)
      		get_column_value(f1,cols, blocknum, blockstart, fileheader1, header1, retcolumns, rowids, found_index, join1, data, dict_cache,values_cache,short_offsets_cache,int_offsets_cache,char_offsets_cache);
      		delete [] rowids;
      		return found_index;
@@ -568,20 +573,23 @@ unordered_map<long int, unsigned char* > &char_offsets_cache  ){
     return 0;
 }
 
-Generator <int> equi_filter(char* filename, char*** &cols, int &col_num, char* &val, char* &retcols, int &colnum, bool &cont){
+Generator <int> equi_filter(char* filename, char*** &cols, int &col_num, char* &val, int* &retcols, int &colnum, bool &cont){
 
   unordered_map<long int, vector <string>> values_cache;
   unordered_map<long int, unsigned short* > short_offsets_cache;  
   unordered_map<long int, unsigned int* > int_offsets_cache;
   unordered_map<long int, unsigned char* > char_offsets_cache;
-
+  
   while (cont == 1) {  
     //TODO if file changes free caches
-    vector <int> retcolumns = extractattributes(retcols);
-    colnum = retcolumns.size();
-    int max = *max_element(retcolumns.begin(), retcolumns.end());
+    //colnum = sizeof(retcols) / sizeof(retcols[0]);
+ 
+    vector<int> retcolumns(retcols, retcols + colnum);
+    int max = -1;
+    if (colnum>0)
+        max = *max_element(retcolumns.begin(), retcolumns.end());
+    
     vector <unordered_map <int, vector <string>*>> dict_cache(max+1);
-
     int totalcount1=0;
     FILE *f1;
     f1 = fopen(filename,"rb");
@@ -592,9 +600,15 @@ Generator <int> equi_filter(char* filename, char*** &cols, int &col_num, char* &
     int offset = -1;
     int global_len = 0;
     /*read marker of file*/
+
     char marker[5];
-    result =  fread( marker, 4, 1, f1);
+    result =  fread(marker, 4, 1, f1);
+    if (strncmp(marker,"DIFF",4) != 0){
+        co_yield -2;
+    }
+    else{
     
+        
     struct fileH fileheader1;
     result =  fread(&fileheader1,sizeof(struct fileH), 1, f1);
     vector <vector <int>> index1;
@@ -613,13 +627,12 @@ Generator <int> equi_filter(char* filename, char*** &cols, int &col_num, char* &
 	int blocknum = -1;
     
     int rows = 0;
-    
      cols = (char***)malloc(colnum*sizeof(char **));
      for(int mal=0; mal < colnum; mal++) cols[mal] = (char**)malloc(65535*sizeof(char*));
     
     
  	while (totalcount1 < fileheader1.numofvals){
-
+         
  	     rows = filter_page(f1, cols, blocknum, initstep1, join1, fileheader1, totalcount1,  value, retcolumns, dict_cache, global_len, offset, data,  values_cache,short_offsets_cache,int_offsets_cache,char_offsets_cache);
  	     co_yield rows;
  	     
@@ -631,6 +644,7 @@ Generator <int> equi_filter(char* filename, char*** &cols, int &col_num, char* &
  	free(cols);
     fclose(f1);
     co_yield -1;
+    }
     }
  //TODO free caches
 }
@@ -1627,7 +1641,7 @@ int print_columns(char*** &cols, int rows, int coln){
         		  cout << "\033[1;31m|\033[0m";
         		  }
     			}
-    		  cout << endl;	
+    			if (coln>0) cout << endl;	
      		}
      		
      	

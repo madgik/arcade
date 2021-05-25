@@ -24,6 +24,20 @@
 #include "hps/hps.h"
 
 
+int extractattributes(std::string s, int*& columns) {
+  
+  string parsed;
+  stringstream input_stringstream(s);
+  int c = 0;
+  while (getline(input_stringstream,parsed,',')){
+     if (parsed == "count") break; 
+     columns[c] = atoi(&parsed[0]);
+     c++;
+}  
+  return c;
+}
+
+
 int main(){
 char* filename = new char[100];
 int col_num;
@@ -31,16 +45,17 @@ int count_rows;
 char* val = new char[200];
 char* retcols = new char[65536*2];
 
-
+int* retcolumns = new int[65536];
 
 
 char*** cols;
 int retcolslen = 0;
 bool cont = 1;
-auto gen = equi_filter(filename,cols, col_num, val, retcols,retcolslen, cont);
+auto gen = equi_filter(filename,cols, col_num, val, retcolumns,retcolslen, cont);
 
 while (1){
     cin >> filename >> col_num >> val >> retcols;
+    retcolslen = extractattributes(retcols, retcolumns);
     //vector <vector <string>> cols;
     double duration = 0.0;
     std::clock_t start = std::clock();
@@ -51,11 +66,12 @@ while (1){
     while (gen){
         rows = gen();
         if (rows == -1) break;
+        if (rows == -2) {cout << "The file is not a valid arcade file" << endl; break;}
         count_rows+=rows;
         
         //cout << *(cols[0][0]) << endl;
         //if (cols.size() > 0) count_rows += cols[0].size();
-        //print_columns(cols, rows, retcolslen);
+        print_columns(cols, rows, retcolslen);
     }
    
         
