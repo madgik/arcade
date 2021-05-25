@@ -568,14 +568,14 @@ unordered_map<long int, unsigned char* > &char_offsets_cache  ){
     return 0;
 }
 
-Generator <int> equi_filter(char* filename, char*** &cols, int &col_num, char* &val, char* &retcols, int &colnum){
+Generator <int> equi_filter(char* filename, char*** &cols, int &col_num, char* &val, char* &retcols, int &colnum, bool &cont){
 
   unordered_map<long int, vector <string>> values_cache;
   unordered_map<long int, unsigned short* > short_offsets_cache;  
   unordered_map<long int, unsigned int* > int_offsets_cache;
   unordered_map<long int, unsigned char* > char_offsets_cache;
 
-  while (true) {  
+  while (cont == 1) {  
     
     vector <int> retcolumns = extractattributes(retcols);
     colnum = retcolumns.size();
@@ -632,6 +632,7 @@ Generator <int> equi_filter(char* filename, char*** &cols, int &col_num, char* &
     fclose(f1);
     co_yield -1;
     }
+  
 }
 
 
