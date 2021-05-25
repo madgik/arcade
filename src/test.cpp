@@ -30,24 +30,32 @@ int col_num;
 int count_rows;
 char* val = new char[200];
 char* retcols = new char[65536*2];
-unordered_map<long int, vector <string>> values_cache;
-unordered_map<long int, unsigned short* > short_offsets_cache;  
-unordered_map<long int, unsigned int* > int_offsets_cache;
-unordered_map<long int, unsigned char* > char_offsets_cache;
 
+
+
+
+char*** cols;
+int retcolslen = 0;
+
+auto gen = equi_filter(filename,cols, col_num, val, retcols,retcolslen);
 
 while (1){
     cin >> filename >> col_num >> val >> retcols;
     //vector <vector <string>> cols;
     double duration = 0.0;
     std::clock_t start = std::clock();
-    vector <vector <string*>> cols;
-    auto gen = equi_filter(filename,col_num, val, retcols,values_cache,short_offsets_cache,int_offsets_cache,char_offsets_cache);
+
+    
     count_rows = 0;
+    int rows = 0;
     while (gen){
-        cols = gen();
-        if (cols.size() > 0) count_rows += cols[0].size();
-        //print_columns(cols);
+        rows = gen();
+        if (rows == -1) break;
+        count_rows+=rows;
+        
+        //cout << *(cols[0][0]) << endl;
+        //if (cols.size() > 0) count_rows += cols[0].size();
+        //print_columns(cols, rows, retcolslen);
     }
    
         
@@ -59,7 +67,7 @@ while (1){
     equi_filter(filename,col_num, val, retcols);*/
     duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
     cout << endl;
-     cout << "Returned  " << count_rows << " rows in " << duration << " seconds" << endl;
+     cout << "Returned " << count_rows << " rows in " << duration << " seconds" << endl;
     //;
 }
 
