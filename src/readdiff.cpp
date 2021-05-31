@@ -3,16 +3,6 @@
 int SNAPPY = 0;
 size_t result;
 
-vector <int> extractattributes(std::string s) {
-  vector <int> columns;
-  string parsed;
-  stringstream input_stringstream(s);
-  
-  while (getline(input_stringstream,parsed,',')){
-     columns.push_back(stoi(parsed));
-}  
-  return columns;
-}
 
 int get_values_no_cache(FILE *f1, long int position, int dictsize, vector <string> &values, unordered_map<long int, vector <string>> &values_cache,
 unordered_map<long int, unsigned short* > &short_offsets_cache,  
@@ -58,6 +48,33 @@ unordered_map<long int, unsigned char* > &char_offsets_cache){
     values = &values_cache[position];
     return 1;
 }
+
+
+/*int get_value(FILE *f1, char*** &cols, int valposition, long int position, int dictsize, unordered_map<long int, vector <string>> &values_cache,
+unordered_map<long int, unsigned short* > &short_offsets_cache,  
+unordered_map<long int, unsigned int* > &int_offsets_cache,
+unordered_map<long int, unsigned char* > &char_offsets_cache){
+    
+    if (values_cache.find(position) == values_cache.end()) {
+      fseek(f1, position, SEEK_SET);
+      char buffer1[dictsize];
+	  if (SNAPPY){
+    	size_t ot =  fread(&buffer1,dictsize,1,f1);
+    	string output;
+    	snappy::Uncompress(buffer1, dictsize, &output);
+    	values_cache[position] = hps::from_char_array<std::vector<string>>(buffer1);
+      }
+      else{
+        result =  fread(buffer1,dictsize,1,f1);
+        values_cache[position] = hps::from_char_array<std::vector<string>>(buffer1);         
+      }
+    }
+    values = &values_cache[position];
+    return 1;
+}*/
+
+
+
 
 //fseek(f1,initstep1+sizeof(struct D)+header1.dictsize+header1.previndices*2 + header1.minmaxsize,SEEK_SET);
 int get_short_offsets(FILE *f1, long int position, int indicessize,int numofvals, unsigned short *(&offsets), unordered_map<long int, vector <string>> &values_cache,
@@ -167,7 +184,6 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
 
 */
   
-  
   int colnum = -1;
   int initstep;
     int temp = 0;
@@ -236,7 +252,6 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
       
  
     for (int j = 0; j < rowidsnum; j++){
-    
     temp = 0;
     prevtemp = 0;
     rightblock = 0;
@@ -259,7 +274,7 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
             break;
         }
     }
-    
+
         if (found == 0){
             position_in_block = off[j] - temp;
             rightblock = blocknum;
@@ -342,7 +357,7 @@ unordered_map<long int, unsigned int* > &int_offsets_cache,
 unordered_map<long int, unsigned char* > &char_offsets_cache  ){
 	        
 	        struct D header1;
-	         int boolminmax = 1; 
+	        int boolminmax = 1; 
             int boolminmax_diff = 1;
 	        int found_index = 0;
 	        
@@ -583,20 +598,16 @@ Generator <int> equi_filter(char* filename, char*** &cols, int &col_num, char* &
   while (cont == 1) {  
     //TODO if file changes free caches
     //colnum = sizeof(retcols) / sizeof(retcols[0]);
- 
     vector<int> retcolumns(retcols, retcols + colnum);
     int max = -1;
     if (colnum>0)
         max = *max_element(retcolumns.begin(), retcolumns.end());
-    
     vector <unordered_map <int, vector <string>*>> dict_cache(max+1);
     int totalcount1=0;
     FILE *f1;
     f1 = fopen(filename,"rb");
-    
     vector<string> parquetvalues1;
     string value = val;
-    
     int offset = -1;
     int global_len = 0;
     /*read marker of file*/
@@ -607,8 +618,6 @@ Generator <int> equi_filter(char* filename, char*** &cols, int &col_num, char* &
         co_yield -2;
     }
     else{
-    
-        
     struct fileH fileheader1;
     result =  fread(&fileheader1,sizeof(struct fileH), 1, f1);
     vector <vector <int>> index1;
@@ -632,14 +641,10 @@ Generator <int> equi_filter(char* filename, char*** &cols, int &col_num, char* &
     
     
  	while (totalcount1 < fileheader1.numofvals){
-         
  	     rows = filter_page(f1, cols, blocknum, initstep1, join1, fileheader1, totalcount1,  value, retcolumns, dict_cache, global_len, offset, data,  values_cache,short_offsets_cache,int_offsets_cache,char_offsets_cache);
  	     co_yield rows;
- 	     
  	}
  	delete [] data;
- 	
- 	
  	for(int mal=0; mal < colnum; mal++) free(cols[mal]);
  	free(cols);
     fclose(f1);
@@ -648,6 +653,86 @@ Generator <int> equi_filter(char* filename, char*** &cols, int &col_num, char* &
     }
  //TODO free caches
 }
+
+
+Generator <int> random_access(char* filename, char*** &cols, int* &retcols, int &colnum,  int* &rowids, int &rowidsnum, bool &cont){
+
+
+        unordered_map<long int, vector <string>> values_cache;
+  		unordered_map<long int, unsigned short* > short_offsets_cache;  
+  		unordered_map<long int, unsigned int* > int_offsets_cache;
+  		unordered_map<long int, unsigned char* > char_offsets_cache;
+  		
+  		
+  		while (cont==1){
+  		
+  		cols = (char***)malloc(colnum*sizeof(char **));
+        for(int mal=0; mal < colnum; mal++) cols[mal] = (char**)malloc(65535*sizeof(char*));
+  		 vector<int> columns(retcols, retcols + colnum);
+         int max = -1;
+         if (colnum>0)
+              max = *max_element(columns.begin(), columns.end());
+    
+        vector <unordered_map <int, vector <string>*>> dict_cache(max+1);
+        
+        FILE *f1;
+        f1 = fopen(filename,"rb");
+        struct D header1;
+        int fcount = 0;
+        int offset = -1;
+        int global_len = 0;
+        /*read marker of file*/
+        char marker[5];
+        result =  fread( marker, 4, 1, f1);
+        
+        struct fileH fileheader1;
+        result =  fread(&fileheader1,sizeof(struct fileH), 1, f1);
+        vector <vector <int>> index1;
+
+        int* col = new int[fileheader1.numofvals];
+        long* data = new long[fileheader1.numofblocks];
+        
+        int rowid = 0;
+        unsigned long initstep1 = 0;
+        int blocknum = 0;
+        result =  fread(data,fileheader1.numofblocks*8,1,f1);
+        int temp_blocknum = -1;
+        int rows_per_block = 0;
+        int start_of_block = 0;
+        for (int i = 0; i < rowidsnum; i++){
+            blocknum = rowids[i]/data[fileheader1.numofblocks -1];
+            if (blocknum != temp_blocknum and temp_blocknum != -1){
+                rowids[i] = rowids[i]%data[fileheader1.numofblocks -1];
+                co_yield get_column_value(f1,cols, temp_blocknum, initstep1, fileheader1, header1, columns, rowids+start_of_block, rows_per_block, -1, data, dict_cache,values_cache,short_offsets_cache,int_offsets_cache,char_offsets_cache);   
+                initstep1 = data[blocknum];
+                temp_blocknum = blocknum;
+                rows_per_block = 0;
+                start_of_block = i;   
+            }
+            temp_blocknum = blocknum;
+            rows_per_block++;
+        	rowid = i%data[fileheader1.numofblocks -1];
+        	initstep1 = data[blocknum];
+        	
+        	if (i == rowidsnum-1)
+        	    co_yield get_column_value(f1,cols, blocknum, initstep1, fileheader1, header1, columns, rowids+start_of_block, rows_per_block, -1, data, dict_cache,values_cache,short_offsets_cache,int_offsets_cache,char_offsets_cache);   
+
+        	
+        }
+        delete [] data;
+ 	   for(int mal=0; mal < colnum; mal++) free(cols[mal]);
+ 	    free(cols);
+        fclose(f1);
+        co_yield -1;
+}
+        
+        //cout << data[blocknum] << endl;
+
+}
+
+
+
+
 
 
 
@@ -1054,6 +1139,7 @@ int read_diff(int argc, char * argv[] ){
     fclose(f1);
     return 0; 
 }
+
 
 
 int random_access_diff(int argc, char * argv[] ){

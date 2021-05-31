@@ -46,21 +46,25 @@ char* val = new char[200];
 char* retcols = new char[65536*2];
 
 int* retcolumns = new int[65536];
-
+char* rids = new char[65536*2];
+int* rowids = new int[65536];
+int rowidsnum = 0;
 
 char*** cols;
 int retcolslen = 0;
 bool cont = 1;
-auto gen = equi_filter(filename,cols, col_num, val, retcolumns,retcolslen, cont);
+auto gen = random_access(filename,cols, retcolumns,retcolslen, rowids, rowidsnum, cont);
 
 while (1){
-    cin >> filename >> col_num >> val >> retcols;
+    cin >> filename >> rids >> retcols;
+   
     retcolslen = extractattributes(retcols, retcolumns);
+    rowidsnum = extractattributes(rids, rowids);
     //vector <vector <string>> cols;
     double duration = 0.0;
     std::clock_t start = std::clock();
 
-    
+     
     count_rows = 0;
     int rows = 0;
     while (gen){
