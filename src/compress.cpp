@@ -647,9 +647,9 @@ int compress(char* infile, char* outfile, int numofvals, char* attributes){
   fileheader1.numofblocks = ceil(fileheader1.numofvals*1.0/BLOCKSIZE);
   cout << fileheader1.numofblocks << endl;
   fwrite(&fileheader1, sizeof(fileheader1), 1, f1);
-  long blocksizes[fileheader1.numofblocks];
+  long blocksizes[fileheader1.numofblocks+1];
   
-  fwrite(blocksizes, (fileheader1.numofblocks)*sizeof(long), 1, f1);
+  fwrite(blocksizes, (fileheader1.numofblocks+1)*sizeof(long), 1, f1);
   
   bool eof = false;
   string line;
@@ -706,8 +706,8 @@ int compress(char* infile, char* outfile, int numofvals, char* attributes){
     fileheader1.numofvals = num_of_vals1;
     fileheader1.numofblocks = ceil(fileheader1.numofvals*1.0/BLOCKSIZE);
     fwrite(&fileheader1, sizeof(fileheader1), 1, f1);
-    blocksizes[fileheader1.numofblocks-1] = BLOCKSIZE;
-    fwrite(blocksizes, (fileheader1.numofblocks)*sizeof(long), 1, f1);
+    blocksizes[fileheader1.numofblocks] = BLOCKSIZE;
+    fwrite(blocksizes, (fileheader1.numofblocks+1)*sizeof(long), 1, f1);
     return (0);
 }
 

@@ -183,7 +183,6 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
 
 
 */
-  
   int colnum = -1;
   int initstep;
     int temp = 0;
@@ -198,7 +197,7 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
         continue;
     }
     else{
-    
+     
     initstep = blockstart;
     int current;
   	fseek(f1, initstep + sizeof(int)*i, SEEK_SET);
@@ -207,13 +206,12 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
     initstep += current + sizeof(int)*(fileheader1.numofcols+1);
     fseek(f1, initstep, SEEK_SET);
    	result =  fread(&header1, sizeof(struct D),1,f1);
-   	
    	unsigned short int *previndex = new unsigned short int[header1.previndices];
     result =  fread(previndex, header1.previndices * 2, 1, f1);
-    
     if (header1.dictsize == 0){ // case no dictionary
       vector <string> *values1;
       get_values(f1,values1,initstep+sizeof(struct D)+header1.previndices * 2,header1.indicessize,values_cache,short_offsets_cache,int_offsets_cache,char_offsets_cache);
+      ;
       int c = 0;
       for (int j = 0; j < rowidsnum; j++){
          cols[colnum][c] = &(*values1)[rowids[j]][0];
@@ -223,6 +221,7 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
     
     else if (header1.diff == 0){
      //case differential dictionary
+     
      int c = 0;
         int initstep1 = initstep;
 
@@ -306,6 +305,7 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
         delete [] off;
     }
         else if (header1.diff == 1){ //local dictionary
+        
         int c = 0;
             int initstep1 = initstep;
             int *off = new int[rowidsnum];
@@ -347,7 +347,7 @@ This dictionary may be already in the cache, so fseek is avoided. The cache is b
 
 
 }
-return 1;
+return rowidsnum;
 }
 
 int filter_page(FILE *f1, char*** &cols, int &blocknum, unsigned long &initstep1, int join1, struct fileH fileheader1, int &totalcount1, string &value, vector <int> retcolumns, vector <unordered_map <int, vector <string>*>> &dict_cache, int &global_len, int &offset, long* (&data),
@@ -622,10 +622,10 @@ Generator <int> equi_filter(char* filename, char*** &cols, int &col_num, char* &
     result =  fread(&fileheader1,sizeof(struct fileH), 1, f1);
     vector <vector <int>> index1;
 
-    long* data = new long[fileheader1.numofblocks];
-	result =  fread(data,fileheader1.numofblocks*8,1,f1);
+    long* data = new long[fileheader1.numofblocks+1];
+	result =  fread(data,(fileheader1.numofblocks+1)*8,1,f1);
 
-	unsigned long initstep1 = 4 + sizeof(struct fileH)+fileheader1.numofblocks*8;
+	unsigned long initstep1 = 4 + sizeof(struct fileH)+(fileheader1.numofblocks+1)*8;
 	
 	if (strstr(filename, "snappy"))
       SNAPPY = 1;
@@ -690,19 +690,21 @@ Generator <int> random_access(char* filename, char*** &cols, int* &retcols, int 
         vector <vector <int>> index1;
 
         int* col = new int[fileheader1.numofvals];
-        long* data = new long[fileheader1.numofblocks];
+        long* data = new long[fileheader1.numofblocks+1];
         
         int rowid = 0;
         unsigned long initstep1 = 0;
         int blocknum = 0;
-        result =  fread(data,fileheader1.numofblocks*8,1,f1);
+        result =  fread(data,(fileheader1.numofblocks+1)*8,1,f1);
+        
         int temp_blocknum = -1;
         int rows_per_block = 0;
         int start_of_block = 0;
         for (int i = 0; i < rowidsnum; i++){
-            blocknum = rowids[i]/data[fileheader1.numofblocks -1];
+            blocknum = (rowids[i])/data[fileheader1.numofblocks];
             if (blocknum != temp_blocknum and temp_blocknum != -1){
-                rowids[i] = rowids[i]%data[fileheader1.numofblocks -1];
+                rowids[i] = (rowids[i])%data[fileheader1.numofblocks];
+                dict_cache.clear();
                 co_yield get_column_value(f1,cols, temp_blocknum, initstep1, fileheader1, header1, columns, rowids+start_of_block, rows_per_block, -1, data, dict_cache,values_cache,short_offsets_cache,int_offsets_cache,char_offsets_cache);   
                 initstep1 = data[blocknum];
                 temp_blocknum = blocknum;
@@ -711,15 +713,15 @@ Generator <int> random_access(char* filename, char*** &cols, int* &retcols, int 
             }
             temp_blocknum = blocknum;
             rows_per_block++;
-        	rowid = i%data[fileheader1.numofblocks -1];
+        	rowids[i] = (rowids[i])%data[fileheader1.numofblocks];
         	initstep1 = data[blocknum];
-        	
-        	if (i == rowidsnum-1)
+        	if (i == rowidsnum-1){
+        		dict_cache.clear();
         	    co_yield get_column_value(f1,cols, blocknum, initstep1, fileheader1, header1, columns, rowids+start_of_block, rows_per_block, -1, data, dict_cache,values_cache,short_offsets_cache,int_offsets_cache,char_offsets_cache);   
 
-        	
+        	}
         }
-        delete [] data;
+       delete [] data;
  	   for(int mal=0; mal < colnum; mal++) free(cols[mal]);
  	    free(cols);
         fclose(f1);
@@ -773,7 +775,7 @@ int read_diff_materialize(int argc, char * argv[] ){
     //cout << fileheader1.numofvals << " " << fileheader1.numofcols << endl;
 
     string* column = new string[fileheader1.numofvals];
-	unsigned long initstep1 = 4 + sizeof(struct fileH) + fileheader1.numofblocks*8;
+	unsigned long initstep1 = 4 + sizeof(struct fileH) + (fileheader1.numofblocks+1)*8;
 	struct D header1;
 	
 	int count = 0;
@@ -974,7 +976,7 @@ int read_diff(int argc, char * argv[] ){
     //cout << fileheader1.numofvals << " " << fileheader1.numofcols << endl;
 
     //string* column = new string[fileheader1.numofvals];
-	unsigned long initstep1 = 4 + sizeof(struct fileH) + fileheader1.numofblocks*8;
+	unsigned long initstep1 = 4 + sizeof(struct fileH) + (fileheader1.numofblocks+1)*8;
 	struct D header1;
 	
 	int count = 0;
@@ -1165,7 +1167,7 @@ int random_access_diff(int argc, char * argv[] ){
         int rowid = 0;
         unsigned long initstep1 = 0;
         int blocknum = 0;
-        result =  fread(data,fileheader1.numofblocks*8,1,f1);
+        result =  fread(data,(fileheader1.numofblocks+1)*8,1,f1);
         if (fileheader1.numofblocks > 1){
         	
         	blocknum = row/data[fileheader1.numofblocks -1];
@@ -1465,9 +1467,9 @@ int read_diff_filt(int argc, char * argv[] ){
     int* col = new int[fileheader1.numofvals];
 
     long data[fileheader1.numofblocks];
-    result =  fread(data,fileheader1.numofblocks*8,1,f1);
+    result =  fread(data,(fileheader1.numofblocks+1)*8,1,f1);
 
-	unsigned long initstep1 = 4 + sizeof(struct fileH)+fileheader1.numofblocks*8;
+	unsigned long initstep1 = 4 + sizeof(struct fileH)+(fileheader1.numofblocks+1)*8;
 	struct D header1;
 	
 	
