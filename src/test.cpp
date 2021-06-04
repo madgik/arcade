@@ -49,11 +49,11 @@ int* retcolumns = new int[65536];
 char* rids = new char[65536*2];
 int* rowids = new int[65536];
 int rowidsnum = 0;
-
+ArcadeReader arcadereader;
 char*** cols;
 int retcolslen = 0;
 bool cont = 1;
-auto gen = random_access(filename,cols, retcolumns,retcolslen, rowids, rowidsnum, cont);
+auto gen = arcadereader.random_access(filename,cols, retcolumns,retcolslen, rowids, rowidsnum, cont);
 
 while (1){
     cin >> filename >> rids >> retcols;
@@ -96,7 +96,7 @@ return 1;
 
 
 
-int main2(){
+int main(){
 char* filename = new char[100];
 int col_num;
 int count_rows;
@@ -104,12 +104,12 @@ char* val = new char[200];
 char* retcols = new char[65536*2];
 
 int* retcolumns = new int[65536];
-
+ArcadeReader arcadereader;
 
 char*** cols;
 int retcolslen = 0;
 bool cont = 1;
-auto gen = equi_filter(filename,cols, col_num, val, retcolumns,retcolslen, cont);
+auto gen = arcadereader.equi_filter(filename,cols, col_num, val, retcolumns,retcolslen, cont);
 
 while (1){
     cin >> filename >> col_num >> val >> retcols;
@@ -150,7 +150,7 @@ return 1;
 
 
 
-int main(){
+int main2(){
 char* filename = new char[100];
 int col_num;
 int count_rows;
@@ -158,12 +158,12 @@ char* val = new char[200];
 char* retcols = new char[65536*2];
 
 int* retcolumns = new int[65536];
-
+ArcadeReader arcadereader;
 
 char*** cols;
 int retcolslen;
 bool cont = 1;
-auto gen = scan(filename,cols,retcolumns,retcolslen, cont);
+auto gen = arcadereader.scan(filename,cols,retcolumns,retcolslen, cont);
 
 while (1){
     cin >> filename >> retcols;
