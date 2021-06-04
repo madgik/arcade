@@ -743,27 +743,31 @@ Generator <int> random_access(char* filename, char*** &cols, int* &retcols, int 
 }
 
 
-int scan_page(FILE *f1, char*** &cols, int &blocknum, unsigned long &initstep1, struct fileH fileheader1, int &totalcount1, vector <int> retcolumns, vector <string>* &globaldict, int &global_len,
+int scan_page(FILE *f1, char*** &cols, int &blocknum, unsigned long &initstep1, struct fileH fileheader1, int &blockn, int &totalcount1, vector <int> retcolumns, vector<vector <string>> &globaldict, int &global_len,
 unordered_map<long int, vector <string>> &values_cache,
 unordered_map<long int, unsigned short* > &short_offsets_cache,  
 unordered_map<long int, unsigned int* > &int_offsets_cache,
 unordered_map<long int, unsigned char* > &char_offsets_cache  ){
 	    //partially works, needs handling of global dictionary, currently there is no append into global dict
 		struct D header1;
+		
 		blocknum++;
 		int current, next;
 		int blockposition = initstep1;
 		int columnslen = retcolumns.size();
+		
 		for (int colnum = 0; colnum < columnslen; colnum++){
-			fseek(f1, blockposition + sizeof(int)*colnum, SEEK_SET);
+			fseek(f1, blockposition + sizeof(int)*retcolumns[colnum], SEEK_SET);
 			result = fread(&current,sizeof(int),1,f1);
 			fseek(f1, blockposition + sizeof(int)*(fileheader1.numofcols), SEEK_SET);
 			result =  fread(&next,sizeof(int),1,f1);
-			initstep1 += current + sizeof(int)*(fileheader1.numofcols+1);
 			fseek(f1,blockposition + current + sizeof(int)*(fileheader1.numofcols+1), SEEK_SET);
 			result =  fread(&header1, sizeof(struct D),1,f1);
-			totalcount1 += header1.numofvals;
-			cout << header1.numofvals << endl;
+			if (colnum == 0){
+				initstep1 += sizeof(int)*(fileheader1.numofcols+1) + next;
+				totalcount1 += header1.numofvals;
+			} 
+			
 			if (header1.dictsize == 0){ //no dict column
 				 vector <string> *values1;
 				 get_values(f1,values1, blockposition + current + sizeof(int)*(fileheader1.numofcols+1) + sizeof(struct D), header1.indicessize, values_cache,short_offsets_cache,int_offsets_cache,char_offsets_cache);
@@ -773,50 +777,43 @@ unordered_map<long int, unsigned char* > &char_offsets_cache  ){
 			}
 			else { // dict column
 				int check = 0;
-				if (header1.diff == 1) {global_len = 0; globaldict = NULL;}// case local dict
-				
+				if (header1.diff == 1) {global_len = 0; globaldict[colnum].clear(); blockn = 0;}// case local dict
 				int temp = global_len;
 				global_len += header1.lendiff;
 				vector<string> *values1;
-				if (header1.lendiff > 0)
+				if (header1.lendiff > 0){
 					get_values(f1,values1, blockposition + current + sizeof(int)*(fileheader1.numofcols+1)+sizeof(struct D)+header1.previndices*2+header1.minmaxsize,header1.dictsize, values_cache,short_offsets_cache,int_offsets_cache,char_offsets_cache);
-				
+				    globaldict[colnum].insert(globaldict[colnum].end(), (*values1).begin(), (*values1).end());
+				}
 				if (header1.indicessize == 4){
 					for (int i=0; i < header1.numofvals; i++)
-							cols[colnum][i] = &(*values1)[0][0]; // revisit 
+						cols[colnum][i] = &(*values1)[0][0]; // TODO to revisit is buggy 
 				}
 				else{
-				    
 					long int position = blockposition + current + sizeof(int)*(fileheader1.numofcols+1)+sizeof(struct D)+header1.dictsize+header1.previndices*2 + header1.minmaxsize;
 					if (header1.bytes==1){ // two byte offsets /*read offsets of file 1*/
 					  unsigned short* offsets;  
+					  
 					  get_short_offsets(f1, position, header1.indicessize, header1.numofvals, offsets,values_cache,short_offsets_cache,int_offsets_cache,char_offsets_cache);
 					  for (int i=0; i < header1.numofvals; i++)
-						   cols[colnum][i] = &(*values1)[offsets[i]][0]; 
-					  
+						    cols[colnum][i] = &(globaldict[colnum][offsets[i]])[0];
 					}
 					if (header1.bytes==0){ // four byte offsets
-						unsigned int* offsets; 
-						 
+						unsigned int* offsets;  
 						get_int_offsets(f1, position, header1.indicessize, header1.numofvals, offsets,values_cache,short_offsets_cache,int_offsets_cache,char_offsets_cache);
 						for (int i=0; i < header1.numofvals; i++)
-							  cols[colnum][i] =  &(*values1)[offsets[i]][0];
-						
-					
+						    cols[colnum][i] = &(globaldict[colnum][offsets[i]])[0];
 					}
 					if (header1.bytes==2){ // one byte offsets
 						unsigned char* offsets;  
 						get_char_offsets(f1, position, header1.indicessize, header1.numofvals, offsets,values_cache,short_offsets_cache,int_offsets_cache,char_offsets_cache);
 						for (int i=0; i < header1.numofvals; i++)
-							  cols[colnum][i] = &(*values1)[offsets[i]][0];
+						    cols[colnum][i] = &(globaldict[colnum][offsets[i]])[0];
 					}
-					
 				}
+			blockn++;
 			} 
-
 		}
-		initstep1 = ftell(f1);
-		cout  << header1.numofvals << endl;
 		return header1.numofvals;
 }
 
@@ -830,16 +827,17 @@ Generator <int> scan(char* filename, char*** &cols, int* &retcols, int &colnum, 
     while (cont == 1) {  
     //TODO if file changes free caches
     //colnum = sizeof(retcols) / sizeof(retcols[0]);
-    
+    vector<vector<string>> globaldict(colnum);
     vector<int> retcolumns(retcols, retcols + colnum);
     int max = -1;
     if (colnum>0)
         max = *max_element(retcolumns.begin(), retcolumns.end());
     int totalcount1=0;
     FILE *f1;
+    int blocknum = -1;
     f1 = fopen(filename,"rb");
     vector<string> parquetvalues1;
-    vector <string>* globaldict;
+    
     int global_len = 0;
     /*read marker of file*/
 
@@ -861,18 +859,24 @@ Generator <int> scan(char* filename, char*** &cols, int* &retcols, int &colnum, 
       SNAPPY = 0;
       
 	int blocknum = -1;
+	int blockn = 0;
     
     int rows = 0;
      cols = (char***)malloc(colnum*sizeof(char **));
      for(int mal=0; mal < colnum; mal++) cols[mal] = (char**)malloc(65535*sizeof(char*));
     
-    
  	while (totalcount1 < fileheader1.numofvals)
- 	     co_yield scan_page(f1, cols, blocknum, initstep1, fileheader1, totalcount1, retcolumns, globaldict, global_len, values_cache,short_offsets_cache,int_offsets_cache,char_offsets_cache);
+ 	     co_yield scan_page(f1, cols, blocknum, initstep1, fileheader1, blockn, totalcount1, retcolumns, globaldict, global_len, values_cache,short_offsets_cache,int_offsets_cache,char_offsets_cache);
  	     
  	for(int mal=0; mal < colnum; mal++) free(cols[mal]);
  	free(cols);
     fclose(f1);
+    
+    for (vector <string> &lala: globaldict)
+        lala.clear();
+    globaldict.clear();
+    globaldict.resize(0);
+    globaldict.shrink_to_fit();
     co_yield -1;
     }
     }
@@ -1872,8 +1876,10 @@ int print_columns(char*** &cols, int rows, int coln){
         		  printf("%s", cols[j][i]); ;
         		  cout << "\033[1;31m|\033[0m";
         		  }
+        		  
     			}
-    			if (coln>0) cout << endl;	
+    			if (coln>0) cout << endl;
+    			break;	
      		}
      		
      	

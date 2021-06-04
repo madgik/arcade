@@ -75,7 +75,7 @@ while (1){
         
         //cout << *(cols[0][0]) << endl;
         //if (cols.size() > 0) count_rows += cols[0].size();
-        print_columns(cols, rows, retcolslen);
+        //print_columns(cols, rows, retcolslen);
     }
    
         
@@ -129,7 +129,7 @@ while (1){
         
         //cout << *(cols[0][0]) << endl;
         //if (cols.size() > 0) count_rows += cols[0].size();
-        print_columns(cols, rows, retcolslen);
+        //print_columns(cols, rows, retcolslen);
     }
    
         
@@ -161,7 +161,7 @@ int* retcolumns = new int[65536];
 
 
 char*** cols;
-int retcolslen = 0;
+int retcolslen;
 bool cont = 1;
 auto gen = scan(filename,cols,retcolumns,retcolslen, cont);
 
@@ -183,7 +183,7 @@ while (1){
         
         //cout << *(cols[0][0]) << endl;
         //if (cols.size() > 0) count_rows += cols[0].size();
-       
+        print_columns(cols, rows, retcolslen);
     }
    
         
