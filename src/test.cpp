@@ -1,3 +1,4 @@
+//g++-10  -std=c++20  "-fcoroutines" -o test2  test.cpp readdiff.cpp cache.cpp process.cpp  -lsnappy -O3 -freorder-blocks-algorithm=simple
 #include "reader.h"
 #include <cstdio>
 #include <cstdlib>
@@ -96,7 +97,7 @@ return 1;
 
 
 
-int main(){
+int main2(){
 char* filename = new char[100];
 int col_num;
 int count_rows;
@@ -150,7 +151,7 @@ return 1;
 
 
 
-int main2(){
+int main(){
 char* filename = new char[100];
 int col_num;
 int count_rows;
@@ -183,7 +184,7 @@ while (1){
         
         //cout << *(cols[0][0]) << endl;
         //if (cols.size() > 0) count_rows += cols[0].size();
-        print_columns(cols, rows, retcolslen);
+       // print_columns(cols, rows, retcolslen);
     }
    
         
