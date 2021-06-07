@@ -199,15 +199,13 @@ Generator <int> ArcadeReader::scan(char* filename, char*** &cols, int* retcols, 
 }
 
 
-
-
-int print_columns(char*** &cols, int rows, int coln){
+int Arcade::print_columns(char*** &cols, int rows, int coln){
              for (int i=0; i<rows; i++){
      		     for (int j=0; j<coln; j++){
      		      if (j == coln-1)
         			printf("%s", cols[j][i]);
         		  else {
-        		  printf("%s", cols[j][i]); ;
+        		  printf("%s", cols[j][i]);
         		  cout << "\033[1;31m|\033[0m";
         		  }
         		  

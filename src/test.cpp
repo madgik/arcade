@@ -124,13 +124,12 @@ while (1){
     int rows = 0;
     while (gen){
         rows = gen();
-        if (rows == -1) break;
         if (rows == -2) {cout << "The file is not a valid arcade file" << endl; break;}
         count_rows+=rows;
         
         //cout << *(cols[0][0]) << endl;
         //if (cols.size() > 0) count_rows += cols[0].size();
-        //print_columns(cols, rows, retcolslen);
+        print_columns(cols, rows, retcolslen);
     }
    
         

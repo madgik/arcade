@@ -40,9 +40,10 @@
 using namespace std;
 #include "process.h"
 
-namespace Arcade{
-int print_columns(string*** &, int, int);
 
+
+namespace Arcade{
+int print_columns(char*** &, int, int);
 
 class ArcadeReader{
   Caches mcaches;
@@ -54,6 +55,12 @@ class ArcadeReader{
     Generator <int> random_access(char*, char*** &, int* , int ,  int* , int );
     Generator <int> scan(char*, char*** &, int*, int);
   
+};
+
+class ArcadeWriter{
+    public:
+    int compress();
+
 };
 
 }
