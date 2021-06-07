@@ -434,8 +434,11 @@ Caches &mcaches  ){
 					globaldict[colnum].insert(globaldict[colnum].end(), (*values1).begin(), (*values1).end());
 				}
 				if (header1.indicessize == 4){
-					for (int i=0; i < header1.numofvals; i++)
-						cols[colnum][i] = &(*values1)[0][0]; // TODO to revisit is buggy 
+				    int unique_offset;
+				    fseek(f1,blockposition + current + sizeof(int)*(fileheader1.numofcols+1)+sizeof(struct D)+header1.dictsize+header1.previndices*2 + header1.minmaxsize;,SEEK_SET);
+				    result = fread(&unique_offset,sizeof(int),1,f1);
+					for (int i=0; i < header1.numofvals; i++) // TODO to revisit perhaps this is buggy 
+						cols[colnum][i] = &(globaldict[colnum][unique_offset])[0];
 				}
 				else{
 					long int position = blockposition + current + sizeof(int)*(fileheader1.numofcols+1)+sizeof(struct D)+header1.dictsize+header1.previndices*2 + header1.minmaxsize;

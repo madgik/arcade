@@ -40,8 +40,6 @@
 using namespace std;
 #include "process.h"
 
-
-
 namespace Arcade{
 int print_columns(char*** &, int, int);
 
@@ -59,8 +57,7 @@ class ArcadeReader{
 
 class ArcadeWriter{
     public:
-    int compress();
-
+    int compress(char*, char*, int, char*);
 };
 
 }
