@@ -37,8 +37,9 @@ The following features are either implemented or will be added in next versions
     - [ ] Multiple equi and range fiters
     - [ ] Multiple operators at a time
 - <b>APIs</b>
-  - [x] C API
-  - [ ] Python API 
+    - [x] C++ API
+    - [ ] C API
+    - [ ] Python API 
 - <b>Distributed features</b>
     - [ ] Partitioning/broadcast of compressed file
     - [ ] Distributed integration (e.g., parallel scans, distributed join etc.)
