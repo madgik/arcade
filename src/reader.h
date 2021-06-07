@@ -40,7 +40,7 @@
 using namespace std;
 #include "process.h"
 
-
+namespace Arcade{
 int print_columns(string*** &, int, int);
 
 
@@ -50,8 +50,10 @@ class ArcadeReader{
   Processing processing;
   
   public: 
-    Generator <int> equi_filter(char*, char*** &, int &, char* &, int* &, int &, bool &);
-    Generator <int> random_access(char*, char*** &, int* &, int &,  int* &, int &, bool &);
-    Generator <int> scan(char*, char*** &, int* &, int &, bool &);
+    Generator <int> equi_filter(char*, char*** &, int , char* , int* , int );
+    Generator <int> random_access(char*, char*** &, int* , int ,  int* , int );
+    Generator <int> scan(char*, char*** &, int*, int);
   
 };
+
+}

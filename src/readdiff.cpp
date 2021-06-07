@@ -1,10 +1,10 @@
 //g++-10 -O3 -std=c++20 "-fcoroutines" -o test test.cpp  -lsnappy
 // g++-10  -std=c++20  "-fcoroutines" -o test2 test.cpp  -lsnappy -O3 -freorder-blocks-algorithm=simple
 #include "reader.h"
+using namespace Arcade;
 
-Generator <int> ArcadeReader::equi_filter(char* filename, char*** &cols, int &col_num, char* &val, int* &retcols, int &colnum, bool &cont){
+Generator <int> ArcadeReader::equi_filter(char* filename, char*** &cols, int col_num, char* val, int* retcols, int colnum){
 
-  while (cont == 1) {  
 	//TODO if file changes free caches
 	//colnum = sizeof(retcols) / sizeof(retcols[0]);
 	vector<int> retcolumns(retcols, retcols + colnum);
@@ -57,16 +57,14 @@ Generator <int> ArcadeReader::equi_filter(char* filename, char*** &cols, int &co
 	for(int mal=0; mal < colnum; mal++) free(cols[mal]);
 	free(cols);
 	fclose(f1);
-	co_yield -1;
 	}
-	}
+	
  //TODO free caches
 }
 
 
-Generator <int> ArcadeReader::random_access(char* filename, char*** &cols, int* &retcols, int &colnum,  int* &rowids, int &rowidsnum, bool &cont){
+Generator <int> ArcadeReader::random_access(char* filename, char*** &cols, int* retcols, int colnum,  int* rowids, int rowidsnum){
 
-		while (cont==1){
 	
 		cols = (char***)malloc(colnum*sizeof(char **));
 		for(int mal=0; mal < colnum; mal++) cols[mal] = (char**)malloc(65535*sizeof(char*));
@@ -133,16 +131,15 @@ Generator <int> ArcadeReader::random_access(char* filename, char*** &cols, int* 
 	   for(int mal=0; mal < colnum; mal++) free(cols[mal]);
 		free(cols);
 		fclose(f1);
-		co_yield -1;
-}
+
 	
 		//cout << data[blocknum] << endl;
 
 }
 
 
-Generator <int> ArcadeReader::scan(char* filename, char*** &cols, int* &retcols, int &colnum, bool &cont){	
-	while (cont == 1) {  
+Generator <int> ArcadeReader::scan(char* filename, char*** &cols, int* retcols, int colnum){	
+ 
 	//TODO if file changes free caches
 	//colnum = sizeof(retcols) / sizeof(retcols[0]);
 	vector<vector<string>> globaldict(colnum);
@@ -196,9 +193,8 @@ Generator <int> ArcadeReader::scan(char* filename, char*** &cols, int* &retcols,
 	globaldict.clear();
 	globaldict.resize(0);
 	globaldict.shrink_to_fit();*/
-	co_yield -1;
 	}
-	}
+	
 
 }
 
