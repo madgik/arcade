@@ -1,4 +1,4 @@
-#include "reader.h"
+#include "arcade.h"
 
 using namespace Arcade;
 int extractattributes(std::string s, int*& columns) {
@@ -13,7 +13,6 @@ int extractattributes(std::string s, int*& columns) {
 }  
   return c;
 }
-
 
 
 int compress(ArcadeWriter &arcadewriter){
