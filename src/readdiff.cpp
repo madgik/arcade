@@ -65,7 +65,7 @@ Generator <int> ArcadeReader::equi_filter(char* filename, char*** &cols, int col
 
 Generator <int> ArcadeReader::random_access(char* filename, char*** &cols, int* retcols, int colnum,  int* rowids, int rowidsnum){
 
-	
+	    
 		cols = (char***)malloc(colnum*sizeof(char **));
 		for(int mal=0; mal < colnum; mal++) cols[mal] = (char**)malloc(65535*sizeof(char*));
 		 vector<int> columns(retcols, retcols + colnum);
@@ -105,8 +105,9 @@ Generator <int> ArcadeReader::random_access(char* filename, char*** &cols, int* 
 		int temp_blocknum = -1;
 		int rows_per_block = 0;
 		int start_of_block = 0;
-
+        
 		for (int i = 0; i < rowidsnum; i++){
+		
 			blocknum = (rowids[i])/data[fileheader1.numofblocks];
 			if (blocknum != temp_blocknum and temp_blocknum != -1){
 				rowids[i] = (rowids[i])%data[fileheader1.numofblocks];
@@ -117,6 +118,7 @@ Generator <int> ArcadeReader::random_access(char* filename, char*** &cols, int* 
 				rows_per_block = 0;
 				start_of_block = i;   
 			}
+			
 			temp_blocknum = blocknum;
 			rows_per_block++;
 			rowids[i] = (rowids[i])%data[fileheader1.numofblocks];
@@ -124,7 +126,6 @@ Generator <int> ArcadeReader::random_access(char* filename, char*** &cols, int* 
 			if (i == rowidsnum-1){
 				dict_cache.clear();
 				co_yield processing.get_column_value(f1,cols, blocknum, initstep1, fileheader1, header1, columns, rowids+start_of_block, rows_per_block, -1, data, dict_cache, this->mcaches);   
-
 			}
 		}
 	   delete [] data;

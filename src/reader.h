@@ -56,8 +56,9 @@ class ArcadeReader{
 };
 
 class ArcadeWriter{
+    int BLOCKSIZE = 65535;
     public:
-    int compress(char*, char*, int, char*);
+    int compress(char*, char*, int, int, int*, int);
 };
 
 }

@@ -21,26 +21,12 @@
 #include <fstream>
 #include "bloom/bloom_filter.hpp"
 #include "hps/hps.h"
+#include "reader.h"
 
 using namespace std;
-int BLOCKSIZE = 65535;
-int CACHE_SIZE = 8192000*2;
-struct D {
-    int dictsize;
-    int indicessize;
-    int numofvals;
-    int bytes;
-    int lendiff;
-    int diff;
-    int minmaxsize;
-    int previndices;
-};
+using namespace Arcade;
 
-struct fileH {
-     int numofvals;
-     int numofcols;
-     int numofblocks;
-};
+
 
 struct rec {
      int rowid;
@@ -62,7 +48,7 @@ vector <int> extractattributes(std::string s) {
   stringstream input_stringstream(s);
   
   while (getline(input_stringstream,parsed,',')){
-     cout << parsed << endl;
+     //cout << parsed << endl;
      columns.push_back(stoi(parsed));
 }  
   return columns;
@@ -171,7 +157,7 @@ vector<std::string> merge3(vector <string> &glob, vector <string> &vec){
     cout << diff.size() << endl;
     cout << glob.size() << endl;*/
     duration5 += ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
-    cout << duration5 << endl;
+    //cout << duration5 << endl;
     
     return diff;
 }
@@ -184,7 +170,7 @@ vector<std::string> merge2(vector <string> &glob, vector <string> &vec){
     int alen = glob.size();
     int blen = vec.size();
     vector <string> temp(alen+blen);
-    cout << alen << " " << blen << endl;
+    //cout << alen << " " << blen << endl;
     vector <string> diff;
     int i = 0, j = 0, k = 0, diffl = 0, templ = 0;
 
@@ -213,7 +199,7 @@ vector<std::string> merge2(vector <string> &glob, vector <string> &vec){
         
     }
 
-    cout << "diff:" << " "<< diff.size() << " "<< "temp: "<< temp.size() << endl;
+    //cout << "diff:" << " "<< diff.size() << " "<< "temp: "<< temp.size() << endl;
     //if (temp.size()>0)
     //cout << temp[temp.size()-1] << endl;
     glob.assign( temp.begin(), temp.begin()+templ);
@@ -244,7 +230,8 @@ OutputIt calc_diff(InputIt1 first1, InputIt1 last1,
 
 
 
-int compress_batch(vector <string> vals, FILE *f1, bloom_filter *filter, bool &isdictionary, vector <int> &sizediff, vector <string> &globaldict, unordered_map <string, bool> &glob, unordered_map<string, size_t> &lookup, vector <short> &diffvals, int blocknum){
+int compress_batch(vector <string> vals, FILE *f1, bloom_filter *filter, bool &isdictionary, vector <int> &sizediff, vector <string> &globaldict, unordered_map <string, bool> &glob, unordered_map<string, size_t> &lookup, vector <short> &diffvals, int blocknum, int BLOCKSIZE){
+    int CACHE_SIZE = 8192000*2;
     struct D header;
     header.numofvals = vals.size();
     vector <string> minmax(4);
@@ -306,7 +293,7 @@ if (permanent_decision == 1){
     
     calc_diff(vec.begin(), vec.end(), glob, std::inserter(diff, diff.begin()));
     if ((diff.size()*1.0)/distinct_count>0.9 and globdsize>0){
-        cout << "small delta" << endl;
+        //cout << "small delta" << endl;
         permanent_decision = 1;
         }
 }
@@ -329,7 +316,7 @@ start = std::clock();
     
 if (permanent_decision == 1){
     if (global_dict_memory > CACHE_SIZE or globdsize == 0){
-        cout << global_dict_memory << " " << CACHE_SIZE << " " << globdsize << endl;
+        //cout << global_dict_memory << " " << CACHE_SIZE << " " << globdsize << endl;
         diffdict = 0;
     }
     else if (globdsize > 0 and diff.size()*1.0/distinct_count > 0.99)  diffdict = 0;
@@ -378,7 +365,7 @@ if (permanent_decision == 1){
         int pblocks = ((CACHE_SIZE-global_dict_memory)/(diffdictdump));
         if (pblocks*(diffs*BLOCKSIZE) + sizeofdiff - pblocks*(locs*BLOCKSIZE + diffavg) - sizelocal > 0){
         //if (pblocks*(diffs*BLOCKSIZE) + sizeofdiff - (pblocks/diffcount)*((diffcount+pblocks%diffcount)*(locs*BLOCKSIZE + diffavg) + sizelocal) > 0){
-            cout  << "cost function" << endl;
+           // cout  << "cost function" << endl;
             diffdict = 0;
             //}
         }
@@ -387,7 +374,7 @@ if (permanent_decision == 1){
 else diffdict = 0; //to demostrate the ram cpu compression trade-offs. 
 diffdict = 1;
 duration5 += ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
-    cout << duration5 << endl;
+    //cout << duration5 << endl;
 
 if (diffdict == 1){
     
@@ -606,8 +593,8 @@ else if (diffdict == 0){
 
 
 
-int compress(char* infile, char* outfile, int numofvals, char* attributes){
-    vector <int> mcolumns = extractattributes(attributes);
+int ArcadeWriter::compress(char* infile, char* outfile, int startp, int numofvals, int* retcols, int colnum){
+    vector<int> mcolumns(retcols, retcols + colnum);
 	int COLNUM = mcolumns.size();
 	vector<vector <int>> sizediff(COLNUM);
 	vector<vector <string>> globaldict(COLNUM);
@@ -645,7 +632,8 @@ int compress(char* infile, char* outfile, int numofvals, char* attributes){
   fileheader1.numofcols = COLNUM;
   fileheader1.numofvals = numofvals;
   fileheader1.numofblocks = ceil(fileheader1.numofvals*1.0/BLOCKSIZE);
-  cout << fileheader1.numofblocks << endl;
+  //cout << fileheader1.numofblocks << endl;
+  
   fwrite(&fileheader1, sizeof(fileheader1), 1, f1);
   long blocksizes[fileheader1.numofblocks+1];
   
@@ -657,12 +645,20 @@ int compress(char* infile, char* outfile, int numofvals, char* attributes){
   
   int num_of_vals1 = 0;
   
+  for (int i = 0; i<startp; i++){
+        std::getline(finput, line);
+  }
+  
   while (!eof) {
     int numValues = 0;      // num of lines read in a batch
 
     dataset.clear();
     // read a batch of lines from the input file
     start = std::clock();
+     
+    
+    
+    
     for (int i = 0; i < BLOCKSIZE; ++i) {
       if (!std::getline(finput, line) or num_of_vals1 >= fileheader1.numofvals) {
         eof = true;
@@ -682,7 +678,7 @@ int compress(char* infile, char* outfile, int numofvals, char* attributes){
     for (int j = 0; j < COLNUM; j++){
                long tell1 = ftell(f1);
                //compress(dataset, f1, sizediff[j], globaldict[j], glob[j], lookup[j], diffvals[j]);
-               compress_batch(extractColumn(dataset,mcolumns[j]), f1, &filter, isdictionary, sizediff[j], globaldict[j], glob[j], lookup[j], diffvals[j], blocknum); 
+               compress_batch(extractColumn(dataset,mcolumns[j]), f1, &filter, isdictionary, sizediff[j], globaldict[j], glob[j], lookup[j], diffvals[j], blocknum, BLOCKSIZE); 
                //compress(slice(dataset,0,dataset.size()-1),f1);
                columnindexes[j] = tell1-tell;
     }
@@ -699,23 +695,14 @@ int compress(char* infile, char* outfile, int numofvals, char* attributes){
 }
          
     
-
-    std::cout<<"csv import time: "<< duration <<'\n';
-    
+    //std::cout<<"csv import time: "<< duration <<'\n';
     fseek(f1,ft,SEEK_SET);
     fileheader1.numofvals = num_of_vals1;
     fileheader1.numofblocks = ceil(fileheader1.numofvals*1.0/BLOCKSIZE);
     fwrite(&fileheader1, sizeof(fileheader1), 1, f1);
     blocksizes[fileheader1.numofblocks] = BLOCKSIZE;
     fwrite(blocksizes, (fileheader1.numofblocks+1)*sizeof(long), 1, f1);
-    return (0);
+    fflush(f1);
+    return 0;
 }
 
-int main(int argc, char** argv)
-{
-    if (argc != 5){
-        cout << "wrong input" << endl;
-    }
-    /*TODO check input*/
-    return compress(argv[1], argv[2], atoi(argv[3]), argv[4]);
-}

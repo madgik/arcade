@@ -1,5 +1,6 @@
 #include "process.h"
 
+
 int Processing::get_column_value(FILE *f1, char*** &cols, int blocknum, long int blockstart, struct fileH fileheader1, struct D header1, vector <int> columns, int* rowids, int rowidsnum, int join1, long* data, vector <unordered_map <int, vector <string>*>> &dict_cache,
 Caches &mcaches){
 
@@ -435,7 +436,7 @@ Caches &mcaches  ){
 				}
 				if (header1.indicessize == 4){
 				    int unique_offset;
-				    fseek(f1,blockposition + current + sizeof(int)*(fileheader1.numofcols+1)+sizeof(struct D)+header1.dictsize+header1.previndices*2 + header1.minmaxsize;,SEEK_SET);
+				    fseek(f1,blockposition + current + sizeof(int)*(fileheader1.numofcols+1)+sizeof(struct D)+header1.dictsize+header1.previndices*2 + header1.minmaxsize,SEEK_SET);
 				    result = fread(&unique_offset,sizeof(int),1,f1);
 					for (int i=0; i < header1.numofvals; i++) // TODO to revisit perhaps this is buggy 
 						cols[colnum][i] = &(globaldict[colnum][unique_offset])[0];

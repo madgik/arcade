@@ -1,28 +1,4 @@
-//g++-10  -std=c++20  "-fcoroutines" -o test2  test.cpp readdiff.cpp cache.cpp process.cpp  -lsnappy -O3 -freorder-blocks-algorithm=simple
 #include "reader.h"
-#include <cstdio>
-#include <cstdlib>
-#include <string>
-#include <vector>
-//#include <msgpack.hpp>
-#include <iostream>
-#include <numeric>      // std::iota
-#include <algorithm>
-#include <sstream>
-#include <unistd.h>
-#include <map>
-#include <iterator>
-#include <sqlite3.h>
-#include <sstream>
-#include <thread>
-#include <fstream>
-#include <cstring>
-#include <cmath>
-#include <sstream>
-#include <string>
-#include <fstream>
-#include "bloom/bloom_filter.hpp"
-#include "hps/hps.h"
 
 using namespace Arcade;
 int extractattributes(std::string s, int*& columns) {
@@ -39,165 +15,155 @@ int extractattributes(std::string s, int*& columns) {
 }
 
 
-int main3(){
-char* filename = new char[100];
-int col_num;
-int count_rows;
-char* val = new char[200];
-char* retcols = new char[65536*2];
 
-int* retcolumns = new int[65536];
-char* rids = new char[65536*2];
-int* rowids = new int[65536];
-int rowidsnum = 0;
-ArcadeReader arcadereader;
-char*** cols;
-int retcolslen = 0;
-bool cont = 1;
+int compress(ArcadeWriter &arcadewriter){
+	char* filename = new char[100];
+	char*  outfile = new char[100];
+	int* retcolumns = new int[1000];
+	char* retcols = new char[1000];
+	int retcolslen;
+	int init;
+	int row_count;
+	double duration = 0.0;
+    std::clock_t start;
+	cin >> filename >> outfile >> init >> row_count >> retcols;
+	retcolslen = extractattributes(retcols, retcolumns);
+	start = std::clock();
+	arcadewriter.compress(filename, outfile, init, row_count, retcolumns, retcolslen);
+	duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
+	cout << "Compressed " << row_count << " rows in " << duration << " seconds" << endl;
+	delete [] filename;
+	delete [] outfile;
+	delete [] retcolumns;
+	delete [] retcols;
+	return 1;
+}
 
 
-while (1){
-    cin >> filename >> rids >> retcols;
-   
+int filter(ArcadeReader &arcadereader){
+    char*** cols;
+    int col_num;
+    char* val = new char[200];
+    char* filename = new char[100];
+    int* retcolumns = new int[1000];
+	char* retcols = new char[1000];
+	int retcolslen;
+    int row_count = 0;
+    int rows;
+    double duration = 0.0;
+    std::clock_t start;
+	cin >> filename >> col_num >> val >> retcols;
+    retcolslen = extractattributes(retcols, retcolumns);
+    start = std::clock();
+    auto gen = arcadereader.equi_filter(filename,cols, col_num, val, retcolumns,retcolslen);
+    rows = 0;
+    while (gen){
+        rows = gen();
+        if (rows == -2) {cout << "The file is not a valid arcade file" << endl; break;}
+        row_count+=rows;
+        //print_columns(cols, rows, retcolslen);
+    }
+    duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
+    cout << "Returned " << row_count << " rows in " << duration << " seconds" << endl;
+
+	delete [] filename;
+	delete [] retcolumns;
+	delete [] retcols;
+	delete [] val;
+	return 1;
+}
+
+int scan(ArcadeReader &arcadereader){
+    char*** cols;
+    char* filename = new char[100];
+    int* retcolumns = new int[1000];
+	char* retcols = new char[1000];
+	int retcolslen;
+    int row_count;
+    int rows;
+    double duration = 0.0;
+    std::clock_t start;
+	cin >> filename >> retcols;
+	retcolslen = extractattributes(retcols, retcolumns);
+	start = std::clock();
+	auto gen = arcadereader.scan(filename,cols,retcolumns,retcolslen);
+	row_count = 0;
+	rows = 0;
+	while (gen){
+		rows = gen();
+		if (rows == -2) {cout << "The file is not a valid arcade file" << endl; break;}
+		row_count += rows;
+		//print_columns(cols, rows, retcolslen);
+	}
+	duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
+	cout << "Returned " << row_count << " rows in " << duration << " seconds" << endl;
+	delete [] filename;
+	delete [] retcolumns;
+	delete [] retcols;
+	return 1;
+}
+
+int random_access(ArcadeReader &arcadereader){
+	char* filename = new char[100];
+	int col_num;
+	int count_rows = 0;
+	char* retcols = new char[1000];
+	int* retcolumns = new int[1000];
+	char* rids = new char[1000];
+	int* rowids = new int[1000];
+	int rowidsnum = 0;
+	int rows = 0;
+	char*** cols;
+	int retcolslen = 0;
+	cin >> filename >> rids >> retcols;
     retcolslen = extractattributes(retcols, retcolumns);
     rowidsnum = extractattributes(rids, rowids);
-    //vector <vector <string>> cols;
     double duration = 0.0;
     std::clock_t start = std::clock();
     auto gen = arcadereader.random_access(filename,cols, retcolumns,retcolslen, rowids, rowidsnum);
-     
-    count_rows = 0;
-    int rows = 0;
     while (gen){
         rows = gen();
-        if (rows == -1) break;
         if (rows == -2) {cout << "The file is not a valid arcade file" << endl; break;}
         count_rows+=rows;
-        
-        //cout << *(cols[0][0]) << endl;
-        //if (cols.size() > 0) count_rows += cols[0].size();
         //print_columns(cols, rows, retcolslen);
     }
    
-        
-        //print_columns(gen());
-    /*equi_filter(filename,col_num, val, retcols);
     duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
-    cout << duration << endl;
-    start = std::clock();
-    equi_filter(filename,col_num, val, retcols);*/
-    duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
-    cout << endl;
-     cout << "Returned " << count_rows << " rows in " << duration << " seconds" << endl;
-    //;
+    cout << "Returned " << count_rows << " rows in " << duration << " seconds" << endl;
+    delete [] filename;
+	delete [] retcolumns;
+	delete [] retcols;
+	delete [] rids;
+	delete [] rowids;
+	
+	return 1;
 }
-
-return 1;
-}
-
-
 
 int main(){
-char* filename = new char[100];
-int col_num;
-int count_rows;
-char* val = new char[200];
-char* retcols = new char[65536*2];
-
-int* retcolumns = new int[65536];
-ArcadeReader arcadereader;
-
-char*** cols;
-int retcolslen = 0;
-bool cont = 1;
-
-
-while (1){
-    cin >> filename >> col_num >> val >> retcols;
-    retcolslen = extractattributes(retcols, retcolumns);
-    //vector <vector <string>> cols;
-    double duration = 0.0;
-    std::clock_t start = std::clock();
-
-    auto gen = arcadereader.equi_filter(filename,cols, col_num, val, retcolumns,retcolslen);
-    count_rows = 0;
-    int rows = 0;
-    while (gen){
-        rows = gen();
-        if (rows == -2) {cout << "The file is not a valid arcade file" << endl; break;}
-        count_rows+=rows;
-        
-        //cout << *(cols[0][0]) << endl;
-        //if (cols.size() > 0) count_rows += cols[0].size();
-        print_columns(cols, rows, retcolslen);
+  char querytype; // C for compress, F for filter, R for random rows look-up, S for full materialized scan 
+  ArcadeReader arcadereader;
+  ArcadeWriter arcadewriter;
+  while (true){
+    cin >> querytype;
+    switch (querytype)
+	{
+    	case 'C':
+			compress(arcadewriter);
+			break;
+    	case 'F':
+    		filter(arcadereader);
+      		break;
+        case 'R':
+            random_access(arcadereader);
+        	break;
+        case 'S':
+            scan(arcadereader);
+            break;
+    	default:
+    	   cout << "not valid query type" << endl;
     }
-   
-        
-        //print_columns(gen());
-    /*equi_filter(filename,col_num, val, retcols);
-    duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
-    cout << duration << endl;
-    start = std::clock();
-    equi_filter(filename,col_num, val, retcols);*/
-    duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
-    cout << endl;
-     cout << "Returned " << count_rows << " rows in " << duration << " seconds" << endl;
-    //;
-}
-
-return 1;
+  }
+    
 }
 
 
-
-int main2(){
-char* filename = new char[100];
-int col_num;
-int count_rows;
-char* val = new char[200];
-char* retcols = new char[65536*2];
-
-int* retcolumns = new int[65536];
-ArcadeReader arcadereader;
-
-char*** cols;
-int retcolslen;
-bool cont = 1;
-
-
-while (1){
-    cin >> filename >> retcols;
-    retcolslen = extractattributes(retcols, retcolumns);
-    //vector <vector <string>> cols;
-    double duration = 0.0;
-    std::clock_t start = std::clock();
-
-    auto gen = arcadereader.scan(filename,cols,retcolumns,retcolslen);
-    count_rows = 0;
-    int rows = 0;
-    while (gen){
-        rows = gen();
-        if (rows == -1) break;
-        if (rows == -2) {cout << "The file is not a valid arcade file" << endl; break;}
-        count_rows+=rows;
-        
-        //cout << *(cols[0][0]) << endl;
-        //if (cols.size() > 0) count_rows += cols[0].size();
-       // print_columns(cols, rows, retcolslen);
-    }
-   
-        
-        //print_columns(gen());
-    /*equi_filter(filename,col_num, val, retcols);
-    duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
-    cout << duration << endl;
-    start = std::clock();
-    equi_filter(filename,col_num, val, retcols);*/
-    duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
-    cout << endl;
-     cout << "Returned " << count_rows << " rows in " << duration << " seconds" << endl;
-    //;
-}
-
-return 1;
-}
