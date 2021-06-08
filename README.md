@@ -34,8 +34,6 @@ The following features are either implemented or will be added in next versions
     - [ ] Sort
     - [ ] Aggregations
     - [ ] Group by's
-    - [ ] Multiple equi and range fiters
-    - [ ] Multiple operators at a time
 - <b>APIs</b>
     - [x] C++ API
     - [ ] C API
