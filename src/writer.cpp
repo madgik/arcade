@@ -2,7 +2,6 @@
 #include <cstdlib>
 #include <string>
 #include <vector>
-//#include <msgpack.hpp>
 #include <iostream>
 #include <numeric>      // std::iota
 #include <algorithm>
@@ -744,3 +743,6 @@ int ArcadeWriter::compress(char* infile, char* outfile, int startp, int numofval
     return 0;
 }
 
+
+
+//echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf > /dev/null
