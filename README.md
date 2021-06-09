@@ -7,20 +7,23 @@ Its first version supports string datatypes, compression, decompression, random 
 
 ### Installation
 
-required g++ version 10 or newer with c++20 and coroutines
+Dependencies:
 
-Install Snappy compression library
+- g++ version 10 or newer with c++20 and coroutines
 
-apt install libsnappy-dev
+- Snappy compression/decompression library
 
-of install from source:
-sudo apt-get install liblz4-dev
-git clone https://github.com/google/snappy.git
-cd snappy
-git submodule update --init
-mkdir build
-cd build && cmake ../ && make
-sudo make install
+        apt install libsnappy-dev
+
+  or install from source:
+
+        apt install liblz4-dev
+        git clone https://github.com/google/snappy.git
+        cd snappy
+        git submodule update --init
+        mkdir build
+        cd build && cmake ../ && make
+        sudo make install
 
 
 ### Examples
