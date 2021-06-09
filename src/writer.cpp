@@ -422,9 +422,7 @@ if (diffdict == 1){
         */}
     snappy::string comprst;  
     if (SNAPPY){
-    cout << "lala2" << endl;
             snappy::Compress(&st[0], st.size(), &comprst);
-            cout << "lala1" << endl;
             header.dictsize = comprst.size();
         }
     else
