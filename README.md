@@ -17,7 +17,6 @@ Dependencies:
 
   or install from source:
 
-        apt install liblz4-dev
         git clone https://github.com/google/snappy.git
         cd snappy
         git submodule update --init
