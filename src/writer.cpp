@@ -230,7 +230,7 @@ OutputIt calc_diff(InputIt1 first1, InputIt1 last1,
 
 
 
-int compress_batch(vector <string> vals, FILE *f1, bloom_filter *filter, bool &isdictionary, vector <int> &sizediff, vector <string> &globaldict, unordered_map <string, bool> &glob, unordered_map<string, size_t> &lookup, vector <short> &diffvals, int blocknum, int BLOCKSIZE){
+int compress_batch(vector <string> vals, FILE *f1, bloom_filter *filter, bool &isdictionary, vector <int> &sizediff, vector <string> &globaldict, unordered_map <string, bool> &glob, unordered_map<string, size_t> &lookup, vector <short> &diffvals, int blocknum, int BLOCKSIZE, bool SNAPPY){
     int CACHE_SIZE = 8192000*2;
     struct D header;
     header.numofvals = vals.size();
@@ -412,16 +412,25 @@ if (diffdict == 1){
     std::replace(std::begin(resp), std::begin(resp) + stmm.size(), '\0', ' ');
     printf("%s\n",resp);*/
     
+    
+    
     if (st==""){
         st = hps::to_string(diff);
         /*std::stringstream buffer;
         msgpack::pack(buffer, diff);
         st = buffer.str();
         */}
-        
-    header.dictsize = st.size();
-    global_dict_memory +=  header.dictsize;
-    sizediff.push_back(header.dictsize);
+    snappy::string comprst;  
+    if (SNAPPY){
+    cout << "lala2" << endl;
+            snappy::Compress(&st[0], st.size(), &comprst);
+            cout << "lala1" << endl;
+            header.dictsize = comprst.size();
+        }
+    else
+        header.dictsize = st.size();
+    global_dict_memory +=  st.size();
+    sizediff.push_back(st.size());
    
     header.lendiff = diff.size();
     
@@ -442,7 +451,11 @@ if (diffdict == 1){
         fwrite(&header, sizeof(header), 1, f1);
         fwrite(a, diffvals.size()*sizeof(short), 1, f1);
         fwrite(&stmm[0], header.minmaxsize ,1 , f1 );
-        fwrite(&st[0], header.dictsize ,1 , f1 );
+        if (SNAPPY){
+            fwrite(&comprst[0], header.dictsize ,1 , f1 );
+            }
+        else
+            fwrite(&st[0], header.dictsize ,1 , f1 );
         fwrite(&offsets,sizeof(char),vals.size(),f1);
     }
     else if (globaldict.size()<65536){
@@ -457,7 +470,10 @@ if (diffdict == 1){
          fwrite(&header, sizeof(header), 1, f1);
          fwrite(a, diffvals.size()*sizeof(short), 1, f1);
          fwrite(&stmm[0], header.minmaxsize ,1 , f1 );
-         fwrite(&st[0], header.dictsize ,1 , f1 );
+          if (SNAPPY)
+            fwrite(&comprst[0], header.dictsize ,1 , f1 );
+        else
+            fwrite(&st[0], header.dictsize ,1 , f1 );
         fwrite(&offsets,sizeof(unsigned short),vals.size(),f1);
     }
     if (globaldict.size()>65536){
@@ -472,7 +488,10 @@ if (diffdict == 1){
         fwrite(&header, sizeof(header), 1, f1);
         fwrite(a, diffvals.size()*sizeof(short), 1, f1);
         fwrite(&stmm[0], header.minmaxsize ,1 , f1 );
-        fwrite(&st[0], header.dictsize ,1 , f1 );
+         if (SNAPPY)
+            fwrite(&comprst[0], header.dictsize ,1 , f1 );
+        else
+            fwrite(&st[0], header.dictsize ,1 , f1 );
         fwrite(&offsets,sizeof(unsigned int),vals.size(),f1);
     }
 }
@@ -526,8 +545,15 @@ else if (diffdict == 0){
         msgpack::pack(buffer, vec);
         stloc = buffer.str();
     */}
-    header.dictsize = stloc.size();
-    global_dict_memory +=  header.dictsize;
+    
+    snappy::string comprst;
+    if (SNAPPY){
+            snappy::Compress(&stloc[0], stloc.size(), &comprst);
+            header.dictsize = comprst.size();
+        }
+    else
+        header.dictsize = stloc.size();
+    global_dict_memory +=  stloc.size();
     header.lendiff = distinct_count;
     
     header.diff = 1; 
@@ -550,7 +576,11 @@ else if (diffdict == 0){
         fwrite(&header, sizeof(header), 1, f1);
         fwrite(a, diffvals.size()*sizeof(short), 1, f1);
         fwrite(&stmm[0], header.minmaxsize ,1 , f1 );
-        fwrite(&stloc[0], header.dictsize ,1 , f1 );
+        if (SNAPPY)
+            fwrite(&comprst[0], header.dictsize ,1 , f1 );
+        else
+            fwrite(&stloc[0], header.dictsize ,1 , f1 );
+            
         fwrite(&offsets,sizeof(char),vals.size(),f1);
     }
     else if (globaldict.size()<65536){
@@ -565,7 +595,10 @@ else if (diffdict == 0){
          fwrite(&header, sizeof(header), 1, f1);
          fwrite(a, diffvals.size()*sizeof(short), 1, f1);
          fwrite(&stmm[0], header.minmaxsize ,1 , f1 );
-         fwrite(&stloc[0], header.dictsize ,1 , f1 );
+         if (SNAPPY)
+            fwrite(&comprst[0], header.dictsize ,1 , f1 );
+        else
+            fwrite(&stloc[0], header.dictsize ,1 , f1 );
         fwrite(&offsets,sizeof(unsigned short),vals.size(),f1);
     }
     if (globaldict.size()>65536){
@@ -580,7 +613,10 @@ else if (diffdict == 0){
         fwrite(&header, sizeof(header), 1, f1);
         fwrite(a, diffvals.size()*sizeof(short), 1, f1);
         fwrite(&stmm[0], header.minmaxsize ,1 , f1 );
-        fwrite(&stloc[0], header.dictsize ,1 , f1 );
+        if (SNAPPY)
+            fwrite(&comprst[0], header.dictsize ,1 , f1 );
+        else
+            fwrite(&stloc[0], header.dictsize ,1 , f1 );
         fwrite(&offsets,sizeof(unsigned int),vals.size(),f1);
     }
     
@@ -617,7 +653,11 @@ int ArcadeWriter::compress(char* infile, char* outfile, int startp, int numofval
     input = infile;
     std::clock_t start;
     double duration;
-    
+    if (strstr(outfile, "snappy"))
+			SNAPPY = 1;
+		else
+			SNAPPY = 0;
+			
     std::ifstream finput(input.c_str());
     
     FILE *f1;
@@ -678,7 +718,7 @@ int ArcadeWriter::compress(char* infile, char* outfile, int startp, int numofval
     for (int j = 0; j < COLNUM; j++){
                long tell1 = ftell(f1);
                //compress(dataset, f1, sizediff[j], globaldict[j], glob[j], lookup[j], diffvals[j]);
-               compress_batch(extractColumn(dataset,mcolumns[j]), f1, &filter, isdictionary, sizediff[j], globaldict[j], glob[j], lookup[j], diffvals[j], blocknum, BLOCKSIZE); 
+               compress_batch(extractColumn(dataset,mcolumns[j]), f1, &filter, isdictionary, sizediff[j], globaldict[j], glob[j], lookup[j], diffvals[j], blocknum, BLOCKSIZE, SNAPPY); 
                //compress(slice(dataset,0,dataset.size()-1),f1);
                columnindexes[j] = tell1-tell;
     }

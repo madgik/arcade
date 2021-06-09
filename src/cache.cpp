@@ -8,9 +8,9 @@ int Caches::get_values(FILE *f1, vector <string>* &values, long int position, in
 	  char buffer1[dictsize];
 	  if (SNAPPY){
 		size_t ot =  fread(&buffer1,dictsize,1,f1);
-		string output;
+		snappy::string output;
 		snappy::Uncompress(buffer1, dictsize, &output);
-		this->values_cache[position] = hps::from_char_array<std::vector<string>>(buffer1);
+		this->values_cache[position] = hps::from_string<std::vector<string>>(output);
 	  }
 	  else{
 		result =  fread(buffer1,dictsize,1,f1);
@@ -28,7 +28,7 @@ int Caches::get_short_offsets(FILE *f1, long int position, int indicessize,int n
 	  fseek(f1, position, SEEK_SET);
 	  offsets = new unsigned short [numofvals];  
 
-	  if (SNAPPY){
+	  if (SNAPPY == -1){
 		char buffer1 [indicessize];
 		result =  fread(buffer1,indicessize,1,f1);
 		string output;
@@ -53,7 +53,7 @@ int Caches::get_int_offsets(FILE *f1,long int position, int indicessize,int numo
 	if (this->int_offsets_cache.find(position) == this->int_offsets_cache.end()) {
 	  fseek(f1, position, SEEK_SET);
 	  offsets = new unsigned int [numofvals];  
-	  if (SNAPPY){
+	  if (SNAPPY == -1){
 		char buffer1[indicessize];
 		result =  fread(buffer1,indicessize,1,f1);
 		string output;
@@ -77,7 +77,7 @@ int Caches::get_char_offsets(FILE *f1,long int position, int indicessize, int nu
 	if (this->char_offsets_cache.find(position) == this->char_offsets_cache.end()) {
 	  fseek(f1, position, SEEK_SET);
 	  offsets = new unsigned char [numofvals];  
-	  if (SNAPPY){
+	  if (SNAPPY == -1){
 		char buffer1[indicessize];
 		result =  fread(buffer1,indicessize,1,f1);
 		string output;

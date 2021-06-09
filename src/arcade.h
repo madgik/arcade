@@ -43,6 +43,7 @@ class ArcadeReader{
 
 class ArcadeWriter{
     int BLOCKSIZE = 65535;
+    bool SNAPPY;
     public:
     int compress(char*, char*, int, int, int*, int);
 };
