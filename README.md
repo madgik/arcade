@@ -38,7 +38,7 @@ The following features are either implemented or will be added in next versions
     - [ ] Other datatypes (e.g., integers, floats...) 
 - <b>Write Operations</b>
     - [x] Encode multi-column CSV files
-    - [x] Snappy Compression
+    - [x] Snappy Compression (currently for dictionary values)
     - [ ] ZStandard Compression
 - <b>Read Operations</b>
     - [x] Attributes projection
