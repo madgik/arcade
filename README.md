@@ -1,7 +1,9 @@
 # Arcade
 
+<b>Version: Alpha</b>
+
 Arcade is a compressed columnar file format, with an implementation of basic operations without or partial decompression. 
-Its first Alpha version supports string datatypes, compression, decompression, random row look-up, equi filter evaluation.
+Its current version supports string datatypes, compression, decompression, random row look-up, equi filter evaluation.
 
 ## Documentation
 
@@ -22,7 +24,7 @@ Install:
 
 ### Usage
 
-Arcade currently in its Alpha version is schemaless. There are no attribute names and types. All the input is considered as strings. 
+Arcade's current version is schemaless. There are no attribute names and types. All the input is considered as strings. 
 Column names are numbered 0,1,2...
 Source file runner.cpp contains code that uses arcade lib to compress, scan, filtered scan and look-up specific rows.
 
