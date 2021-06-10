@@ -4,7 +4,7 @@
 #include <iostream>
 #include <vector>
 #include "hps/hps.h"
-#include "snappy/snappy.h"
+#include "snappy.h"
 
 using namespace std;
 

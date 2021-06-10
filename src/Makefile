@@ -2,7 +2,7 @@
 #CDC = /usr/bin/g++-10 # Flag for implicit rules
 CPP = g++
 
-CPPFLAGS = -O3 -std=c++20  -Isnappy/third_party/googletest/googletest/include/ -fcoroutines -freorder-blocks-algorithm=simple -fPIC # Flag for implicit rules. Turn on debug info
+CPPFLAGS = -O3 -std=c++20  -Isnappy -Isnappy/third_party/googletest/googletest/include/ -fcoroutines -freorder-blocks-algorithm=simple -fPIC # Flag for implicit rules. Turn on debug info
 
 # Implicit rule #1: blah is built via the C linker implicit rule
 # Implicit rule #2: blah.o is built via the C compilation implicit rule, because blah.c exists
@@ -20,7 +20,7 @@ depend:
 	cd snappy; git submodule update --init; mkdir build; cd build && cmake ../ && make
 	
 runner:  ./libarcade.a runner.cpp
-	$(CPP) -O3 -std=c++20 -fcoroutines -freorder-blocks-algorithm=simple -o runner runner.cpp -L. -larcade snappy/build/libsnappy.a snappy/build/lib/libgtest.a -Isnappy/third_party/googletest/googletest/include/
+	$(CPP) -O3 -std=c++20 -fcoroutines -freorder-blocks-algorithm=simple -o runner runner.cpp -L. -larcade snappy/build/libsnappy.a snappy/build/lib/libgtest.a -Isnappy -Isnappy/third_party/googletest/googletest/include/
 
 clean:  reader.o cache.o process.o writer.o libarcade.a
 	rm -f *.o
