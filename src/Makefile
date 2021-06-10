@@ -19,8 +19,8 @@ depend:
 	git clone https://github.com/google/snappy.git
 	cd snappy; git submodule update --init; mkdir build; cd build && cmake ../ && make
 	
-runner:  ./libarcade.a test.cpp
-	$(CPP) -O3 -std=c++20 -fcoroutines -freorder-blocks-algorithm=simple -o runner test.cpp -L. -larcade snappy/build/libsnappy.a snappy/build/lib/libgtest.a -Isnappy/third_party/googletest/googletest/include/
+runner:  ./libarcade.a runner.cpp
+	$(CPP) -O3 -std=c++20 -fcoroutines -freorder-blocks-algorithm=simple -o runner runner.cpp -L. -larcade snappy/build/libsnappy.a snappy/build/lib/libgtest.a -Isnappy/third_party/googletest/googletest/include/
 
 clean:  reader.o cache.o process.o writer.o libarcade.a
 	rm -f *.o
