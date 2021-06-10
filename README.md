@@ -1,7 +1,7 @@
 # Arcade
 
 Arcade is a compressed columnar file format, with an implementation of basic operations without or partial decompression. 
-Its first version supports string datatypes, compression, decompression, random row look-up, equi filter evaluation.
+Its first Alpha version supports string datatypes, compression, decompression, random row look-up, equi filter evaluation.
 
 ## Documentation
 
@@ -10,26 +10,100 @@ Its first version supports string datatypes, compression, decompression, random 
 Dependencies:
 
 - g++ version 10 or newer with c++20 and coroutines
+- git
 
-- Snappy compression/decompression library
+Install:
 
-        apt install libsnappy-dev
+        git clone https://github.com/madgik/arcade.git
+        cd arcade/src
+        make depend # install dependencies
+        make # creates arcade library (libarcade.a)
+        make runner #creates runner executable to use for testing all features
 
-  or install from source:
+### Usage
 
-        git clone https://github.com/google/snappy.git
-        cd snappy
-        git submodule update --init
-        mkdir build
-        cd build && cmake ../ && make
-        sudo make install
-
-
-### Examples
+Arcade currently in its Alpha version is schemaless. There are no attribute names and types. All the input is considered as strings. 
+Column names are numbered 0,1,2...
 
 #### Write
+Supports ',' delimited files.
+
+        #include "arcade.h"
+        using namespace arcade;
+        ArcadeWriter arcadewriter;
+        arcadewriter.compress(infile, outfile, init, row_count, retcolumns, retcolslen);
+        /* infile <- (char*) input file name, ',' delimited file */
+        /* outfile <- (char*) output file, if output filename includes "snappy" then snappy compression is applied */
+        /* init <- (int) input file row number from which the encoding starts */
+        /* row_count <- (int) # of rows that will be encoded */
+        /* retcolumns <- (int*) columns that will be encoded */
+        /* retcolslen <- (int) # of columns that will be encoded */
 
 #### Read
+##### Equi filter
+
+        #include "arcade.h"
+        using namespace arcade;
+        ArcadeReader arcadereader;
+        /*equi_filter is a generator coroutine which yields the results per page*/
+        auto gen = arcadereader.equi_filter(filename,cols, col_num, val, retcolumns,retcolslen);
+        while (gen){
+                rows = gen();
+                print_columns(cols, rows, retcolslen);
+        }
+        /* filename <- (char*) input arcade filename */
+        /* cols <- (char***) here the results per batch are loaded */
+        /* col_num <- (int) the number of the filtered column */
+        /* val <- (char*) the value that is searched */
+        /* retcolumns <- (int*) columns that will be projected */
+        /* retcolslen <- (int) number of columns that will be projected */
+        /* returns the count of rows that matched the filter per batch */
+
+##### Scan
+
+        #include "arcade.h"
+        using namespace arcade;
+        ArcadeReader arcadereader;
+        /*scan is a generator coroutine which yields the results per page*/
+        auto gen = arcadereader.scan(filename,cols,retcolumns,retcolslen);
+        while (gen){
+                rows = gen();
+                print_columns(cols, rows, retcolslen);
+        }
+        /* filename <- (char*) input arcade filename */
+        /* cols <- (char***) here the results per batch are loaded */
+        /* retcolumns <- (int*) columns that will be projected */
+        /* retcolslen <- (int) # of columns that will be projected */
+        /* returns the count of yielded rows per iteration */
+
+##### Random Access
+
+        #include "arcade.h"
+        using namespace arcade;
+        ArcadeReader arcadereader;
+        /*scan is a generator coroutine which yields the results per page*/
+        auto gen = arcadereader.random_access(filename,cols, retcolumns,retcolslen, rowids, rowidsnum);
+        while (gen){
+                rows = gen();
+                print_columns(cols, rows, retcolslen);
+        }
+        /* filename <- (char*) input arcade filename */
+        /* cols <- (char***) here the results per batch are loaded */
+        /* retcolumns <- (int*) columns that will be projected */
+        /* retcolslen <- (int) number of columns that will be projected */
+        /* rowids <- (int*) row numbers that will be decoded */
+        /* rowidsnum <- (int) # of rows that will be decoded */
+        /* returns the count of yielded rows per iteration */
+    
+#### runner executable (src/test.cpp source code)
+
+insert to terminal:
+
+        C input.csv output.arcade 10 20 0,1 # compresses columns 0 and 1 and rows from 10 to 20 from input file and creates output.arcade
+        F output.arcade 1 value 0,1 # filter scans column 1 from file output.arcade with value and projects columns 0 and 1
+        R output.arcade 15,100 0,1 # projects columns 0 and 1 with row numbers 15 and 100
+        S output.arcade 0,1 # projects columns 0 and 1 of file output.arcade
+
 
 ## Features 
 
