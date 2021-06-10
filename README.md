@@ -1,6 +1,6 @@
 # Arcade
 
-Version: Alpha
+<b>Version: Alpha</b>
 
 Arcade is a compressed columnar file format, with an implementation of basic operations without or partial decompression. 
 Its current version supports string datatypes, compression, decompression, random row look-up, equi filter evaluation.
