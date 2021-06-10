@@ -11,7 +11,7 @@
 #include <getopt.h>
 #include <string>
 #include <memory>
-#include <gtest/gtest.h>
+#include "snappy/third_party/googletest/googletest/include/gtest/gtest.h"
 #include <array>
 #include <cmath>
 #include <cstdint>
