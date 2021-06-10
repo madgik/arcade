@@ -174,7 +174,7 @@ if (diffdict == 1){
     if (st==""){
         st = hps::to_string(diff);
         }
-    snappy::string comprst;  
+    string comprst;
     if (SNAPPY){
             snappy::Compress(&st[0], st.size(), &comprst);
             header.dictsize = comprst.size();
@@ -291,7 +291,7 @@ else if (diffdict == 0){
         stloc = hps::to_string(vec);
       }
     
-    snappy::string comprst;
+    string comprst;
     if (SNAPPY){
             snappy::Compress(&stloc[0], stloc.size(), &comprst);
             header.dictsize = comprst.size();

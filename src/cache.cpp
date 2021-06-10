@@ -8,7 +8,7 @@ int Caches::get_values(FILE *f1, vector <string>* &values, long int position, in
 	  char buffer1[dictsize];
 	  if (SNAPPY){
 		size_t ot =  fread(&buffer1,dictsize,1,f1);
-		snappy::string output;
+		string output;
 		snappy::Uncompress(buffer1, dictsize, &output);
 		this->values_cache[position] = hps::from_string<std::vector<string>>(output);
 	  }
