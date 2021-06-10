@@ -7,36 +7,20 @@
 using namespace std;
 using namespace Arcade;
 
-
-
 struct rec {
      int rowid;
      int val;
 };
 
-unsigned long global_dict_memory = 0;
 
+/*TODO move these two inside function*/
 int permanent_decision = 1;
-
 double duration5 = 0.0;
 
-static char gDelimiter = ',';
-// extract one column raw text from one line
 
-vector <int> extractattributes(std::string s) {
-  vector <int> columns;
-  string parsed;
-  stringstream input_stringstream(s);
-  
-  while (getline(input_stringstream,parsed,',')){
-     //cout << parsed << endl;
-     columns.push_back(stoi(parsed));
-}  
-  return columns;
-}
 
 vector<std::string> extractColumn(vector<std::string> dataset, uint64_t colIndex) {
-
+  char gDelimiter = ',';
   vector<std::string> column(dataset.size());
   for (int i=0; i < dataset.size(); i++){
       	uint64_t col = 0;
@@ -74,7 +58,7 @@ OutputIt calc_diff(InputIt1 first1, InputIt1 last1,
 
 
 
-int compress_batch(vector <string> vals, FILE *f1, bloom_filter *filter, bool &isdictionary, vector <int> &sizediff, vector <string> &globaldict, unordered_map <string, bool> &glob, unordered_map<string, size_t> &lookup, vector <short> &diffvals, int blocknum, int BLOCKSIZE, bool SNAPPY){
+int compress_batch(vector <string> vals, FILE *f1, bloom_filter *filter, bool &isdictionary, vector <int> &sizediff, vector <string> &globaldict, unordered_map <string, bool> &glob, unordered_map<string, size_t> &lookup, vector <short> &diffvals, int blocknum, int BLOCKSIZE, bool SNAPPY, unsigned long &global_dict_memory){
     int CACHE_SIZE = 8192000*2;
     struct D header;
     header.numofvals = vals.size();
@@ -402,6 +386,7 @@ else if (diffdict == 0){
 
 
 int ArcadeWriter::compress(char* infile, char* outfile, int startp, int numofvals, int* retcols, int colnum){
+    unsigned long global_dict_memory = 0;
     vector<int> mcolumns(retcols, retcols + colnum);
 	int COLNUM = mcolumns.size();
 	vector<vector <int>> sizediff(COLNUM);
@@ -487,7 +472,7 @@ int ArcadeWriter::compress(char* infile, char* outfile, int startp, int numofval
     for (int j = 0; j < COLNUM; j++){
                long tell1 = ftell(f1);
                //compress(dataset, f1, sizediff[j], globaldict[j], glob[j], lookup[j], diffvals[j]);
-               compress_batch(extractColumn(dataset,mcolumns[j]), f1, &filter, isdictionary, sizediff[j], globaldict[j], glob[j], lookup[j], diffvals[j], blocknum, BLOCKSIZE, SNAPPY); 
+               compress_batch(extractColumn(dataset,mcolumns[j]), f1, &filter, isdictionary, sizediff[j], globaldict[j], glob[j], lookup[j], diffvals[j], blocknum, BLOCKSIZE, SNAPPY, global_dict_memory); 
                //compress(slice(dataset,0,dataset.size()-1),f1);
                columnindexes[j] = tell1-tell;
     }

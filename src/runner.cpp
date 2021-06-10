@@ -60,7 +60,7 @@ int filter(ArcadeReader &arcadereader){
         rows = gen();
         if (rows == -2) {cout << "The file is not a valid arcade file" << endl; break;}
         row_count+=rows;
-        print_columns(cols, rows, retcolslen);
+        //print_columns(cols, rows, retcolslen);
     }
     duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
     cout << "Returned " << row_count << " rows in " << duration << " seconds" << endl;
