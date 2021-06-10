@@ -15,6 +15,10 @@ CPPFLAGS = -O3 -std=c++20 -lsnappy -fcoroutines -freorder-blocks-algorithm=simpl
 libarcade.so:  reader.o cache.o process.o writer.o
 	$(CPP) -shared -o libarcade.so reader.o cache.o process.o writer.o $(CPPFLAGS)
 
+depend:
+	git clone https://github.com/google/snappy.git
+	cd snappy; git submodule update --init; mkdir build; cd build && cmake ../ && make
+	
 runner:  ./libarcade.so test.cpp
 	$(CPP) -O3 -std=c++20 -fcoroutines -freorder-blocks-algorithm=simple -o runner test.cpp ./libarcade.so
 
