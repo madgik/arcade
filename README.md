@@ -1,7 +1,7 @@
 # Arcade
 
 Arcade is a compressed columnar file format, with an implementation of basic operations without or partial decompression. 
-Its first version supports string datatypes, compression, decompression, random row look-up, equi filter evaluation.
+Its first Alpha version supports string datatypes, compression, decompression, random row look-up, equi filter evaluation.
 
 ## Documentation
 
@@ -21,7 +21,12 @@ Install
 
 ### Examples
 
+Arcade currently in its Alpha version is schemaless. There are no attribute names and types. All the input is considered as strings. 
+Column names are numbered 0,1,2...
+
 #### Write
+Supports ',' delimited files.
+
 
 #### Read
 
