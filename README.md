@@ -10,26 +10,30 @@ Its first version supports string datatypes, compression, decompression, random 
 Dependencies:
 
 - g++ version 10 or newer with c++20 and coroutines
+- git
 
-- Snappy compression/decompression library
-
-        apt install libsnappy-dev
-
-  or install from source:
-
-        git clone https://github.com/google/snappy.git
-        cd snappy
-        git submodule update --init
-        mkdir build
-        cd build && cmake ../ && make
-        sudo make install
-
+Install
+        git clone https://github.com/madgik/arcade.git
+        cd arcade/src
+        make depend # install dependencies
+        make # creates arcade library (libarcade.a)
+        make runner #creates runner executable to use for testing all features
 
 ### Examples
 
 #### Write
 
 #### Read
+
+#### runner executable (src/test.cpp source code)
+
+insert to terminal:
+
+        C input.csv output.arcade 10 20 0,1 # compresses columns 0 and 1 and rows from 10 to 20 from input file and creates output.arcade
+        F output.arcade 1 value 0,1 # filter scans column 1 from file output.arcade with value and projects columns 0 and 1
+        R output.arcade 15,100 0,1 # projects columns 0 and 1 with row numbers 15 and 100
+        S output.arcade 0,1 # projects columns 0 and 1 of file output.arcade
+
 
 ## Features 
 
