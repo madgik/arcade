@@ -28,6 +28,16 @@ Column names are numbered 0,1,2...
 #### Write
 Supports ',' delimited files.
 
+        #include "arcade.h"
+        using namespace arcade;
+        ArcadeWriter arcadewriter;
+        arcadewriter.compress(infile, outfile, init, row_count, retcolumns, retcolslen);
+        /*infile <- input , delimited file*/
+        /*outfile <- output file , if filename includes "snappy" then snappy compression is applied*/
+        /*init <- input file row number from which the encoding starts */
+        /* row_count <- number of rows that will be encoded */
+        /* retcolumns <- columns that will be encoded */
+        /* retcolslen <- number of columns that will be encoded */
 
 #### Read
 
