@@ -12,7 +12,8 @@ Dependencies:
 - g++ version 10 or newer with c++20 and coroutines
 - git
 
-Install
+Install:
+
         git clone https://github.com/madgik/arcade.git
         cd arcade/src
         make depend # install dependencies
