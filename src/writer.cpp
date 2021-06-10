@@ -7,16 +7,9 @@
 using namespace std;
 using namespace Arcade;
 
-struct rec {
-     int rowid;
-     int val;
-};
-
-
 /*TODO move these two inside function*/
 int permanent_decision = 1;
 double duration5 = 0.0;
-
 
 
 vector<std::string> extractColumn(vector<std::string> dataset, uint64_t colIndex) {
