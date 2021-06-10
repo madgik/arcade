@@ -7,7 +7,7 @@
 #include <cassert>
 #include <fstream>
 #include <memory>
-#include "snappy.h"
+#include "snappy/snappy.h"
 #include <getopt.h>
 #include <string>
 #include <memory>
