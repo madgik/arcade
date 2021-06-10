@@ -24,6 +24,7 @@ Install:
 
 Arcade currently in its Alpha version is schemaless. There are no attribute names and types. All the input is considered as strings. 
 Column names are numbered 0,1,2...
+Source file runner.cpp contains code that uses arcade lib to compress, scan, filtered scan and look-up specific rows.
 
 #### Write
 Supports ',' delimited files.
@@ -95,7 +96,7 @@ Supports ',' delimited files.
         /* rowidsnum <- (int) # of rows that will be decoded */
         /* returns the count of yielded rows per iteration */
     
-#### runner executable (src/test.cpp source code)
+#### runner executable (src/runner.cpp source code)
 
 insert to terminal:
 
