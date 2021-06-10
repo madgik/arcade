@@ -84,7 +84,7 @@ Supports ',' delimited files.
         #include "arcade.h"
         using namespace arcade;
         ArcadeReader arcadereader;
-        /*scan is a generator coroutine which iterates per page and yields the result count*/
+        /*random_access is a generator coroutine which iterates per page and yields the result count*/
         auto gen = arcadereader.random_access(filename,cols, retcolumns,retcolslen, rowids, rowidsnum);
         while (gen){
                 rows = gen();
