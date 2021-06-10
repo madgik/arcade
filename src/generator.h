@@ -1,3 +1,6 @@
+#include "gtest/gtest.h"
+#include <coroutine>
+
 template<typename T>
 struct Generator {
   struct promise_type;

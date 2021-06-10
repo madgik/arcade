@@ -1,9 +1,6 @@
-#include <vector>
-#include <string>
 #include "cache.h"
 
 using namespace std;
-
 
 struct D {
     int dictsize;

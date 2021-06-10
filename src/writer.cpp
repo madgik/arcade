@@ -1,22 +1,4 @@
-#include <cstdio>
-#include <cstdlib>
-#include <string>
-#include <vector>
-#include <iostream>
-#include <numeric>      // std::iota
-#include <algorithm>
-#include <sstream>
-#include <unistd.h>
-#include <map>
-#include <iterator>
-#include <sqlite3.h>
-#include <sstream>
-#include <thread>
-#include <fstream>
-#include <cstring>
-#include <cmath>
-#include <sstream>
-#include <string>
+#include <numeric>     
 #include <fstream>
 #include "bloom/bloom_filter.hpp"
 #include "hps/hps.h"
@@ -74,143 +56,6 @@ vector<std::string> extractColumn(vector<std::string> dataset, uint64_t colIndex
   return column;
 }
 
-template<class InputIt1, class InputIt2, class OutputIt, class OutputIterator>
-OutputIt merge5(InputIt1 first1, InputIt1 last1,
-                        InputIt2 first2, InputIt2 last2,
-                        OutputIt d_first, OutputIterator glob)
-{
-    while (first1 != last1) {
-        if (first2 == last2){
-         std::copy(first2,last2,glob);
-         return std::copy(first1, last1, d_first);
-         
-        }   
-        if (*first1 < *first2) {
-            *glob++ = *first1;
-            *d_first++ = *first1++;
-            
-        }
-        else{
-            if (! (*first2 < *first1)) {
-                ++first1;
-            }
-            *glob++ = *first2++;
-        }
-    }
-    return d_first;
-}
-
-template<class InputIt1, class InputIt2, class OutputIt>
-OutputIt merge7(InputIt1 first1, InputIt1 last1,
-                        InputIt2 first2, InputIt2 last2,
-                        OutputIt d_first)
-{
-    while (first1 != last1) {
-        if (first2 == last2){
-         return std::copy(first1, last1, d_first);
-         
-        }   
-        if (*first1 < *first2) {
-            *d_first++ = *first1++;
-            
-        }
-        else{
-            if (! (*first2 < *first1)) {
-                ++first1;
-            }
-            *first2++;
-        }
-    }
-    return d_first;
-}
-
-
-
-template <class InputIterator1, class InputIterator2, class OutputIterator>
-  OutputIterator merge6 (InputIterator1 first1, InputIterator1 last1,
-                        InputIterator2 first2, InputIterator2 last2,
-                        OutputIterator result)
-{
-  while (true) {
-    if (first1==last1) return std::copy(first2,last2,result);
-    if (first2==last2) return std::copy(first1,last1,result);
-    *result++ = (*first2<*first1)? *first2++ : *first1++;
-  }
-}
-
-
-
-vector<std::string> merge3(vector <string> &glob, vector <string> &vec){
-    vector <string> diff;
-    //vector <string> glob2(glob.size()+vec.size());
-    //merge5(vec.begin(), vec.end(), glob.begin(), glob.end(), std::inserter(diff, diff.begin()), glob2.begin());
-    std::clock_t start;
-    start = std::clock();
-    merge7(vec.begin(), vec.end(), glob.begin(), glob.end(), std::inserter(diff, diff.begin()));
-    //glob.assign(glob2.begin(), glob2.begin()+diff.size()+glob.size());
-    
-    vector <string> temp(glob.size()+diff.size());
-    merge6(glob.begin(), glob.end(), diff.begin(), diff.end(), temp.begin());
-    glob.assign(temp.begin(), temp.end());
-    /*cout << "lala" << endl;
-    cout << diff.size() << endl;
-    cout << glob.size() << endl;*/
-    duration5 += ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
-    //cout << duration5 << endl;
-    
-    return diff;
-}
-
-
-
-vector<std::string> merge2(vector <string> &glob, vector <string> &vec){
-    
-    
-    int alen = glob.size();
-    int blen = vec.size();
-    vector <string> temp(alen+blen);
-    //cout << alen << " " << blen << endl;
-    vector <string> diff;
-    int i = 0, j = 0, k = 0, diffl = 0, templ = 0;
-
- while (i < alen and j < blen)
-    {
-        //cout << i << " " << glob.size() << endl;
-        if (glob[i].compare(vec[j]) < 0){
-            temp[templ] = glob[i];
-            i++;
-            templ++;
-            }
-        
-        else if (glob[i].compare(vec[j]) == 0){
-            temp[templ] = glob[i];
-            i++;
-            j++;
-            templ++;
-            }
-        else if (glob[i].compare(vec[j]) > 0){
-            temp[templ] = vec[j];
-            diff.push_back(vec[j]);
-            j++;
-            templ++;
-            }
-        
-        
-    }
-
-    //cout << "diff:" << " "<< diff.size() << " "<< "temp: "<< temp.size() << endl;
-    //if (temp.size()>0)
-    //cout << temp[temp.size()-1] << endl;
-    glob.assign( temp.begin(), temp.begin()+templ);
-    
-    return diff;
-}
-
-vector <string> slice( vector <string>  const &v, int m, int n)
-{
-    return std::vector<string>(v.begin() + m, v.begin()+n+1);
-}
-
 
 template<class InputIt1, class OutputIt>
 OutputIt calc_diff(InputIt1 first1, InputIt1 last1,
@@ -234,27 +79,12 @@ int compress_batch(vector <string> vals, FILE *f1, bloom_filter *filter, bool &i
     struct D header;
     header.numofvals = vals.size();
     vector <string> minmax(4);
-    //set<string> s(vals.begin(), vals.end());
-    
-     vector <string> vec = vals;
-    
- //   set<string> s;
-  //  for (string i : vals)
-   //     s.insert(i);
+    vector <string> vec = vals;
     std::sort(vec.begin(),vec.end());
     vec.erase(std::unique(vec.begin(),vec.end()),vec.end() );
-    
-    //sort( vals.begin(), vals.end() );
-    //std::vector<int>::iterator vec = unique( vals.begin(), vals.end() );;
-   
-    //vec.assign(s.begin(), s.end());
-    //sort( vec.begin(), vec.end() );
-    
     int distinct_count = vec.size();
     minmax[0] = vec[0];
     minmax[1] = vec[distinct_count-1];
-    //std::vector<string> glob = globaldict;
-    //std::sort(glob.begin(), glob.end());
     
     if (vec.size()*1.0/vals.size()>0.99){
             isdictionary = false;
@@ -266,16 +96,10 @@ int compress_batch(vector <string> vals, FILE *f1, bloom_filter *filter, bool &i
     		diffvals.clear();
     		lookup.clear();
             string stmm = hps::to_string(minmax);
-    		/*std::stringstream buffermm;
-    		msgpack::pack(buffermm, minmax);
-    		
-    		string stmm = buffermm.str();*/
     		header.minmaxsize = 0;//stmm.size();
-
             string st = hps::to_string(vals);
             header.indicessize = st.size();
     		header.lendiff = 0;
-
         	header.bytes = 0; //TODO perhaps edit this and read to support minmax to parquet pages
         	fwrite(&header, sizeof(header), 1, f1);
         	//fwrite(&stmm[0], header.minmaxsize ,1 , f1 );
@@ -292,7 +116,6 @@ if (permanent_decision == 1){
     
     calc_diff(vec.begin(), vec.end(), glob, std::inserter(diff, diff.begin()));
     if ((diff.size()*1.0)/distinct_count>0.9 and globdsize>0){
-        //cout << "small delta" << endl;
         permanent_decision = 1;
         }
 }
@@ -315,17 +138,12 @@ start = std::clock();
     
 if (permanent_decision == 1){
     if (global_dict_memory > CACHE_SIZE or globdsize == 0){
-        //cout << global_dict_memory << " " << CACHE_SIZE << " " << globdsize << endl;
         diffdict = 0;
     }
     else if (globdsize > 0 and diff.size()*1.0/distinct_count > 0.99)  diffdict = 0;
     
     else if ((globdsize>=256 and distinct_count < 256) or (globdsize >= 65536 and distinct_count < 65536)  or  (globdsize < 256 and (globdsize + diff.size()) > 255) or ( globaldict.size() < 65536 and (globdsize + diff.size()) > 65535)){
         st = hps::to_string(diff);
-        /*std::stringstream buffer;
-        msgpack::pack(buffer, diff);
-        st = buffer.str();
-        */
         int diffdictdump = st.size();
         int diffcount = sizediff.size(); 
         int diffavg = 0;
@@ -345,10 +163,6 @@ if (permanent_decision == 1){
         else diffs = 4;
         
         stloc = hps::to_string(vec);
-        /*std::stringstream buffer5;
-        msgpack::pack(buffer5, vec);
-        stloc = buffer5.str();
-        */
         int sizelocal = stloc.size() + lenvals3*locs;
         int sizeofdiff = diffdictdump + lenvals3*diffs;
         
@@ -373,52 +187,21 @@ if (permanent_decision == 1){
 else diffdict = 0; //to demostrate the ram cpu compression trade-offs. 
 diffdict = 1;
 duration5 += ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
-    //cout << duration5 << endl;
 
 if (diffdict == 1){
     
     globaldict.insert(globaldict.end(), diff.begin(), diff.end());
-//    std::clock_t start;
- //   start = std::clock();
- //vector <string> temp(glob.size()+diff.size());
-    //merge6(glob.begin(), glob.end(), diff.begin(), diff.end(), temp.begin());
     for (string i : diff){
         glob[i] = 0;
     }
-    //glob.assign(temp.begin(), temp.end());
-    ////vector <string> temp(globaldict.size());
-    //merge(glob.begin(), glob.end(),diff.begin(),diff.end(), temp.begin());
-    //glob.assign( temp.begin(), temp.end() );
- //   duration5 += ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
- //   cout << duration5 << endl;
-
     int value = 0;
-    
     for(size_t index = globdsize; index < globaldict.size(); ++index)
         lookup[globaldict[index]] = index;
-    
-    /*if (blocknum == 14 or blocknum == 13 or blocknum == 15)
-        cout << minmax[0] << " " << minmax[1] << " "  << minmax[2] << " " << minmax[3] << endl;*/
-
     string stmm = hps::to_string(minmax);
-    /*std::stringstream buffermm;
-    msgpack::pack(buffermm, minmax);
-    string stmm = buffermm.str();*/
-    header.minmaxsize = stmm.size();
-    
-    /*char resp[2000];
-    std::copy(stmm.begin(), stmm.end(), std::begin(resp));
-    std::replace(std::begin(resp), std::begin(resp) + stmm.size(), '\0', ' ');
-    printf("%s\n",resp);*/
-    
-    
-    
+    header.minmaxsize = stmm.size();   
     if (st==""){
         st = hps::to_string(diff);
-        /*std::stringstream buffer;
-        msgpack::pack(buffer, diff);
-        st = buffer.str();
-        */}
+        }
     snappy::string comprst;  
     if (SNAPPY){
             snappy::Compress(&st[0], st.size(), &comprst);
@@ -518,7 +301,6 @@ else if (diffdict == 0){
         	if ((*filter).contains(val))
             	count++;
     	}
-    	//cout << (count*1.0)/vec.size() << endl;
     	if ((count*1.0)/vec.size()>0.2)
         	permanent_decision = 1;
     	*filter = filternew;
@@ -530,18 +312,12 @@ else if (diffdict == 0){
         lookup[vec[index]] = index;
 
     string stmm = hps::to_string(minmax);
-    /*std::stringstream buffermm;
-    msgpack::pack(buffermm, minmax);
-    string stmm = buffermm.str();*/
     header.minmaxsize = stmm.size();
 
     
     if (stloc==""){
         stloc = hps::to_string(vec);
-        /*std::stringstream buffer;
-        msgpack::pack(buffer, vec);
-        stloc = buffer.str();
-    */}
+      }
     
     snappy::string comprst;
     if (SNAPPY){
@@ -625,7 +401,6 @@ else if (diffdict == 0){
 	
 
 
-
 int ArcadeWriter::compress(char* infile, char* outfile, int startp, int numofvals, int* retcols, int colnum){
     vector<int> mcolumns(retcols, retcols + colnum);
 	int COLNUM = mcolumns.size();
@@ -692,9 +467,6 @@ int ArcadeWriter::compress(char* infile, char* outfile, int startp, int numofval
     dataset.clear();
     // read a batch of lines from the input file
     start = std::clock();
-     
-    
-    
     
     for (int i = 0; i < BLOCKSIZE; ++i) {
       if (!std::getline(finput, line) or num_of_vals1 >= fileheader1.numofvals) {
