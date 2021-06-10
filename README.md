@@ -77,7 +77,7 @@ Supports ',' delimited files.
         /* cols <- (char***) here the results per batch are loaded */
         /* retcolumns <- (int*) columns that will be projected */
         /* retcolslen <- (int) # of columns that will be projected */
-        /* yields the count of yielded rows per iteration */
+        /* yields the count of rows per iteration */
 
 ##### Random Access
 
@@ -96,7 +96,7 @@ Supports ',' delimited files.
         /* retcolslen <- (int) number of columns that will be projected */
         /* rowids <- (int*) row numbers that will be decoded */
         /* rowidsnum <- (int) # of rows that will be decoded */
-        /* yields the count of yielded rows per iteration */
+        /* yields the count of rows per iteration */
     
 #### runner executable (src/runner.cpp source code)
 
