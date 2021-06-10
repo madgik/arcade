@@ -46,7 +46,7 @@ Supports ',' delimited files.
         #include "arcade.h"
         using namespace arcade;
         ArcadeReader arcadereader;
-        /*equi_filter is a generator coroutine which yields the results per page*/
+        /*equi_filter is a generator coroutine which iterates per page and yields the result count*/
         auto gen = arcadereader.equi_filter(filename,cols, col_num, val, retcolumns,retcolslen);
         while (gen){
                 rows = gen();
@@ -58,14 +58,14 @@ Supports ',' delimited files.
         /* val <- (char*) the value that is searched */
         /* retcolumns <- (int*) columns that will be projected */
         /* retcolslen <- (int) number of columns that will be projected */
-        /* returns the count of rows that matched the filter per batch */
+        /* yields the count of rows that matched the filter per batch */
 
 ##### Scan
 
         #include "arcade.h"
         using namespace arcade;
         ArcadeReader arcadereader;
-        /*scan is a generator coroutine which yields the results per page*/
+        /*scan is a generator coroutine which iterates per page and yields the result count*/
         auto gen = arcadereader.scan(filename,cols,retcolumns,retcolslen);
         while (gen){
                 rows = gen();
@@ -75,14 +75,14 @@ Supports ',' delimited files.
         /* cols <- (char***) here the results per batch are loaded */
         /* retcolumns <- (int*) columns that will be projected */
         /* retcolslen <- (int) # of columns that will be projected */
-        /* returns the count of yielded rows per iteration */
+        /* yields the count of yielded rows per iteration */
 
 ##### Random Access
 
         #include "arcade.h"
         using namespace arcade;
         ArcadeReader arcadereader;
-        /*scan is a generator coroutine which yields the results per page*/
+        /*scan is a generator coroutine which iterates per page and yields the result count*/
         auto gen = arcadereader.random_access(filename,cols, retcolumns,retcolslen, rowids, rowidsnum);
         while (gen){
                 rows = gen();
@@ -94,7 +94,7 @@ Supports ',' delimited files.
         /* retcolslen <- (int) number of columns that will be projected */
         /* rowids <- (int*) row numbers that will be decoded */
         /* rowidsnum <- (int) # of rows that will be decoded */
-        /* returns the count of yielded rows per iteration */
+        /* yields the count of yielded rows per iteration */
     
 #### runner executable (src/runner.cpp source code)
 
