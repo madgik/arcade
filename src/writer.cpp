@@ -45,7 +45,7 @@ OutputIt calc_diff(InputIt1 first1, InputIt1 last1,
 }
 
 
-
+/*TODO refactor optimise this function, this can be much faster */
 int compress_batch(vector <string> vals, FILE *f1, bloom_filter *filter, bool &isdictionary, vector <int> &sizediff, vector <string> &globaldict, unordered_map <string, bool> &glob, unordered_map<string, size_t> &lookup, vector <short> &diffvals, int blocknum, int BLOCKSIZE, bool SNAPPY, unsigned long &global_dict_memory, int &permanent_decision, double &duration5){
     int CACHE_SIZE = 8192000*2;
     struct D header;
