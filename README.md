@@ -20,7 +20,7 @@ Install:
         cd arcade/src
         make depend # install dependencies
         make # creates arcade library (libarcade.a)
-        make runner #creates runner executable to use for testing all features
+        make runner # compiles runner.cpp and creates runner executable to use for testing all features
 
 ### Usage
 
