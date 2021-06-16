@@ -18,7 +18,7 @@ Install:
 
         git clone https://github.com/madgik/arcade.git
         cd arcade/src
-        make depend # install dependencies
+        make depend # install dependencies (installs snappy from git)
         make # creates arcade library (libarcade.a)
         make runner # compiles runner.cpp and creates runner executable to use for testing all features
 
