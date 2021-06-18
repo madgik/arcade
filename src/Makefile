@@ -1,13 +1,5 @@
-#g++-10  -std=c++20  "-fcoroutines" -o test2  test.cpp reader.cpp cache.cpp process.cpp writer.cpp -lsnappy -O3 -freorder-blocks-algorithm=simple
-#CDC = /usr/bin/g++-10 # Flag for implicit rules
-#CPP = g++
-
 CPPFLAGS = -O3 -std=c++20  -Isnappy -Isnappy/build -Isnappy/third_party/googletest/googletest/include/ -fcoroutines -freorder-blocks-algorithm=simple -fPIC # Flag for implicit rules. Turn on debug info
 
-# Implicit rule #1: blah is built via the C linker implicit rule
-# Implicit rule #2: blah.o is built via the C compilation implicit rule, because blah.c exists
-
-#DEPS = hellomake.h
 
 %.o: %.c
 	$(CXX) -c -o $@ $< $(CPPFLAGS) snappy/build/libsnappy.a snappy/build/lib/libgtest.a
