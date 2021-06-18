@@ -19,7 +19,6 @@ struct fileH {
      int numofblocks;
 };
 
-
 class Processing{
   size_t result;
   public:
