@@ -58,7 +58,7 @@ int compress_batch(vector <string> vals, FILE *f1, bloom_filter *filter, bool &i
     minmax[0] = vec[0];
     minmax[1] = vec[distinct_count-1];
     
-    if (vec.size()*1.0/vals.size()>0.99){
+    if (vec.size()*1.0/vals.size()>0.80){
             isdictionary = false;
             header.dictsize = 0;
             header.previndices = 0;

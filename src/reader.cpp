@@ -132,8 +132,6 @@ Generator <int> ArcadeReader::random_access(char* filename, char*** &cols, int* 
 	   for(int mal=0; mal < colnum; mal++) free(cols[mal]);
 		free(cols);
 		fclose(f1);
-
-	
 		//cout << data[blocknum] << endl;
 
 }
