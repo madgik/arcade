@@ -156,8 +156,8 @@ if (permanent_decision == 1){
         }
     }
 }
-else diffdict = 0; //to demostrate the ram cpu compression trade-offs. 
-diffdict = 1;
+else diffdict = 0; //to demostrate the ram cpu compression trade-offs.
+//diffdict = 1;
 duration5 += ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
 
 if (diffdict == 1){
