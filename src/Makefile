@@ -4,7 +4,7 @@ CPPFLAGS = -O3 -std=c++20  -Isnappy -Isnappy/build -Isnappy/third_party/googlete
 %.o: %.c
 	$(CXX) -c -o $@ $< $(CPPFLAGS) snappy/build/libsnappy.a snappy/build/lib/libgtest.a
 
-libarcade.a:  reader.o cache.o process.o writer.o
+libarcade.a: reader.o cache.o process.o writer.o
 	ar rcs libarcade.a reader.o cache.o process.o writer.o snappy/build/libsnappy.a snappy/build/lib/libgtest.a
 
 depend:
