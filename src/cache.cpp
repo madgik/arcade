@@ -21,7 +21,6 @@ int Caches::get_values(FILE *f1, vector <string>* &values, long int position, in
 	return 1;
 }
 
-
 int Caches::get_short_offsets(FILE *f1, long int position, int indicessize,int numofvals, unsigned short *(&offsets)){
 
 	if (this->short_offsets_cache.find(position) == this->short_offsets_cache.end()) {
