@@ -1,7 +1,7 @@
 CPPFLAGS = -O3 -std=c++20  -Isnappy -Isnappy/build -Isnappy/third_party/googletest/googletest/include/ -fcoroutines -freorder-blocks-algorithm=simple -fPIC # Flag for implicit rules. Turn on debug info
 
 
-%.o: %.c
+%.o: %.cpp
 	$(CXX) -c -o $@ $< $(CPPFLAGS) snappy/build/libsnappy.a snappy/build/lib/libgtest.a
 
 libarcade.a: reader.o cache.o process.o writer.o
