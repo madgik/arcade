@@ -142,7 +142,6 @@ ArcadeReader::random_access(char *filename, char ***&cols, int *retcols, int col
 
 }
 
-
 Generator<int> ArcadeReader::scan(char *filename, char ***&cols, int *retcols, int colnum) {
 
     //TODO if file changes free caches
@@ -193,6 +192,70 @@ Generator<int> ArcadeReader::scan(char *filename, char ***&cols, int *retcols, i
         globaldict.clear();
     }
 }
+
+
+Generator<int>
+ArcadeReader::range_filter(char *filename, char ***&cols, int col_num, char *val, char op, int *retcols, int colnum) {
+    //TODO if file changes free caches
+    //colnum = sizeof(retcols) / sizeof(retcols[0]);
+    vector<int> retcolumns(retcols, retcols + colnum);
+    int max = -1;
+    if (colnum > 0)
+        max = *max_element(retcolumns.begin(), retcolumns.end());
+    vector<unordered_map<int, vector<string> *>> dict_cache(max + 1);
+    int totalcount1 = 0;
+    FILE *f1;
+    f1 = fopen(filename, "rb");
+    vector<string> parquetvalues1;
+    string value = val;
+    int offset = -1;
+    int global_len = 0;
+    /*read marker of file*/
+
+    char marker[5];
+    result = fread(marker, 4, 1, f1);
+    if (strncmp(marker, "DIFF", 4) != 0) {
+        co_yield -2;
+    }
+    else {
+        struct fileH fileheader1{};
+        result = fread(&fileheader1, sizeof(struct fileH), 1, f1);
+        vector<vector<int>> index1;
+
+        long *data = new long[fileheader1.numofblocks + 1];
+        result = fread(data, (fileheader1.numofblocks + 1) * 8, 1, f1);
+
+        unsigned long initstep1 = 4 + sizeof(struct fileH) + (fileheader1.numofblocks + 1) * 8;
+
+        if (strstr(filename, "snappy"))
+            this->mcaches.SNAPPY = true;
+        else
+            this->mcaches.SNAPPY = false;
+
+        int join1 = col_num;
+        int blocknum = -1;
+
+        int rows = 0;
+        cols = (char ***) malloc(colnum * sizeof(char **));
+        for (int mal = 0; mal < colnum; mal++) cols[mal] = (char **) malloc(65535 * sizeof(char *));
+
+
+        while (totalcount1 < fileheader1.numofvals) {
+            //TODO implement range_filter_page function
+            rows = processing.range_filter_page(f1, cols, blocknum, initstep1, join1, fileheader1, totalcount1, value,
+                                                op, retcolumns, dict_cache, global_len, offset, data, this->mcaches);
+            co_yield rows;
+        }
+        delete[] data;
+        for (int mal = 0; mal < colnum; mal++) free(cols[mal]);
+        free(cols);
+        fclose(f1);
+    }
+    //TODO free caches
+}
+
+
+
 
 int Arcade::print_columns(char ***&cols, int rows, int coln) {
     for (int i = 0; i < rows; i++) {
