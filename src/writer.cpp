@@ -3,17 +3,17 @@
 #include "bloom/bloom_filter.hpp"
 #include "hps/hps.h"
 #include "arcade.h"
+#include <thread>
 
 using namespace std;
 using namespace Arcade;
 
-vector<std::string> extractColumn(vector<std::string> dataset, uint64_t colIndex) {
+int extractColumn(vector<std::string> &dataset, uint64_t colIndex, vector<std::string> &column) {
     char gDelimiter = ',';
-    vector<std::string> column(dataset.size());
     for (int i = 0; i < dataset.size(); i++) {
         uint64_t col = 0;
-        size_t start = 0;
-        size_t end = dataset[i].find(gDelimiter);
+        int start = 0;
+        int end = dataset[i].find(gDelimiter);
         while (col < colIndex && end != std::string::npos) {
             start = end + 1;
             end = dataset[i].find(gDelimiter, start);
@@ -25,13 +25,13 @@ vector<std::string> extractColumn(vector<std::string> dataset, uint64_t colIndex
 
     }
 
-    return column;
+    return 1;
 }
 
 
 template<class InputIt1, class OutputIt>
 OutputIt calc_diff(InputIt1 first1, InputIt1 last1,
-                   unordered_map<string, bool> &glob,
+                   unordered_map<string, int> &glob,
                    OutputIt d_first) {
     while (first1 != last1) {
         if (glob.find(*first1) == glob.end()) {
@@ -44,28 +44,33 @@ OutputIt calc_diff(InputIt1 first1, InputIt1 last1,
 }
 
 
+int create_dict(vector<string> &vals, vector <string> &vec){
+    std::sort(vec.begin(), vec.end());
+    vec.erase(std::unique(vec.begin(), vec.end()), vec.end());
+    return 1;
+}
+
+
 /*TODO refactor optimise this function, this can be much faster */
-int compress_batch(vector<string> vals, FILE *f1, bloom_filter *filter, bool &isdictionary, vector<int> &sizediff,
-                   vector<string> &globaldict, unordered_map<string, bool> &glob, unordered_map<string, size_t> &lookup,
+int compress_batch(vector<string> &vals, vector <string> &vec, FILE *f1, bloom_filter *filter, bool &isdictionary, vector<int> &sizediff,
+                   unordered_map<string, int> &lookup,
                    vector<short> &diffvals, int blocknum, int BLOCKSIZE, bool SNAPPY, unsigned long &global_dict_memory,
                    int &permanent_decision, double &duration5) {
     int CACHE_SIZE = 8192000 * 2;
     struct D header;
     header.numofvals = vals.size();
     vector<string> minmax(4);
-    vector<string> vec = vals;
+    /*vector<string> vec = vals;
     std::sort(vec.begin(), vec.end());
-    vec.erase(std::unique(vec.begin(), vec.end()), vec.end());
+    vec.erase(std::unique(vec.begin(), vec.end()), vec.end());*/
     int distinct_count = vec.size();
     minmax[0] = vec[0];
     minmax[1] = vec[distinct_count - 1];
 
-    if (vec.size() * 1.0 / vals.size() > 0.80) {
+    if (vec.size() * 1.0 / vals.size() > 0.99) {
         isdictionary = false;
         header.dictsize = 0;
         header.previndices = 0;
-        globaldict.clear();
-        glob.clear();
         sizediff.clear();
         diffvals.clear();
         lookup.clear();
@@ -83,14 +88,17 @@ int compress_batch(vector<string> vals, FILE *f1, bloom_filter *filter, bool &is
     }
 
     int diffdict = 1;
-    int globdsize = globaldict.size();
+    int globdsize = lookup.size();
+    if (global_dict_memory > CACHE_SIZE or globdsize == 0)
+        diffdict = 0;
+
     vector<string> diff;
 
-    if (permanent_decision == 1) {
+    if (permanent_decision == 1 and diffdict == 1) {
 
-        calc_diff(vec.begin(), vec.end(), glob, std::inserter(diff, diff.begin()));
+        calc_diff(vec.begin(), vec.end(), lookup, std::inserter(diff, diff.begin()));
         if ((diff.size() * 1.0) / distinct_count > 0.9 and globdsize > 0) {
-            permanent_decision = 1;
+            permanent_decision = 0;
         }
     }
 
@@ -110,16 +118,15 @@ int compress_batch(vector<string> vals, FILE *f1, bloom_filter *filter, bool &is
     std::clock_t start;
     start = std::clock();
 
-    if (permanent_decision == 1) {
-        if (global_dict_memory > CACHE_SIZE or globdsize == 0) {
-            diffdict = 0;
-        }
-        else if (globdsize > 0 and diff.size() * 1.0 / distinct_count > 0.99) diffdict = 0;
+    if (permanent_decision == 1 and diffdict == 1) {
+
+        if (globdsize > 0 and diff.size() * 1.0 / distinct_count > 0.99) diffdict = 0;
 
         else if ((globdsize >= 256 and distinct_count < 256) or (globdsize >= 65536 and distinct_count < 65536) or
                  (globdsize < 256 and (globdsize + diff.size()) > 255) or
-                 (globaldict.size() < 65536 and (globdsize + diff.size()) > 65535)) {
+                 (globdsize < 65536 and (globdsize + diff.size()) > 65535)) {
             st = hps::to_string(diff);
+
             int diffdictdump = st.size();
             int diffcount = sizediff.size();
             int diffavg = 0;
@@ -166,28 +173,22 @@ int compress_batch(vector<string> vals, FILE *f1, bloom_filter *filter, bool &is
 
     if (diffdict == 1) {
 
-        globaldict.insert(globaldict.end(), diff.begin(), diff.end());
-        for (string i : diff) {
-            glob[i] = 0;
-        }
+        //globaldict.insert(globaldict.end(), diff.begin(), diff.end());
+
         int value = 0;
-        for (size_t index = globdsize; index < globaldict.size(); ++index)
-            lookup[globaldict[index]] = index;
+        int c = 0;
+        for (int index = globdsize; index < globdsize+diff.size(); ++index)
+            lookup[diff[c++]] = index;
         string stmm = hps::to_string(minmax);
         header.minmaxsize = stmm.size();
         if (st == "") {
             st = hps::to_string(diff);
         }
         string comprst;
-        if (SNAPPY) {
-            snappy::Compress(&st[0], st.size(), &comprst);
-            header.dictsize = comprst.size();
-        }
-        else
-            header.dictsize = st.size();
+        header.dictsize = st.size();
         global_dict_memory += st.size();
         sizediff.push_back(st.size());
-
+        globdsize += diff.size();
         header.lendiff = diff.size();
 
         diffvals.push_back(blocknum);
@@ -195,10 +196,10 @@ int compress_batch(vector<string> vals, FILE *f1, bloom_filter *filter, bool &is
         short *a = &diffvals[0];
         header.previndices = diffvals.size();
         header.diff = 0; // i am in diff dict
-        if (globaldict.size() < 256) {
+        if (globdsize < 256) {
             char offsets[vals.size()];
             int k = 0;
-            for (string i: vals) {
+            for (string& i: vals) {
                 offsets[k] = lookup[i];
                 k++;
             }
@@ -207,17 +208,13 @@ int compress_batch(vector<string> vals, FILE *f1, bloom_filter *filter, bool &is
             fwrite(&header, sizeof(header), 1, f1);
             fwrite(a, diffvals.size() * sizeof(short), 1, f1);
             fwrite(&stmm[0], header.minmaxsize, 1, f1);
-            if (SNAPPY) {
-                fwrite(&comprst[0], header.dictsize, 1, f1);
-            }
-            else
-                fwrite(&st[0], header.dictsize, 1, f1);
+            fwrite(&st[0], header.dictsize, 1, f1);
             fwrite(&offsets, sizeof(char), vals.size(), f1);
         }
-        else if (globaldict.size() < 65536) {
+        else if (globdsize < 65536) {
             unsigned short offsets[vals.size()];
             int k = 0;
-            for (string i: vals) {
+            for (string& i: vals) {
                 offsets[k] = lookup[i];
                 k++;
             }
@@ -226,16 +223,13 @@ int compress_batch(vector<string> vals, FILE *f1, bloom_filter *filter, bool &is
             fwrite(&header, sizeof(header), 1, f1);
             fwrite(a, diffvals.size() * sizeof(short), 1, f1);
             fwrite(&stmm[0], header.minmaxsize, 1, f1);
-            if (SNAPPY)
-                fwrite(&comprst[0], header.dictsize, 1, f1);
-            else
-                fwrite(&st[0], header.dictsize, 1, f1);
+            fwrite(&st[0], header.dictsize, 1, f1);
             fwrite(&offsets, sizeof(unsigned short), vals.size(), f1);
         }
-        if (globaldict.size() > 65536) {
+        if (globdsize > 65536) {
             unsigned int offsets[vals.size()];
             int k = 0;
-            for (string i: vals) {
+            for (string& i: vals) {
                 offsets[k] = lookup[i];
                 k++;
             }
@@ -244,10 +238,7 @@ int compress_batch(vector<string> vals, FILE *f1, bloom_filter *filter, bool &is
             fwrite(&header, sizeof(header), 1, f1);
             fwrite(a, diffvals.size() * sizeof(short), 1, f1);
             fwrite(&stmm[0], header.minmaxsize, 1, f1);
-            if (SNAPPY)
-                fwrite(&comprst[0], header.dictsize, 1, f1);
-            else
-                fwrite(&st[0], header.dictsize, 1, f1);
+            fwrite(&st[0], header.dictsize, 1, f1);
             fwrite(&offsets, sizeof(unsigned int), vals.size(), f1);
         }
     }
@@ -256,12 +247,8 @@ int compress_batch(vector<string> vals, FILE *f1, bloom_filter *filter, bool &is
         if (permanent_decision == 1) {
             sizediff.clear();
             diffvals.clear();
+            lookup.clear();
             global_dict_memory = 0;
-            globaldict = vec;
-            glob.clear();
-            for (string i : vec) {
-                glob[i] = 0;
-            }
         }
 
         if (permanent_decision == 0) {
@@ -272,7 +259,7 @@ int compress_batch(vector<string> vals, FILE *f1, bloom_filter *filter, bool &is
             parameters.compute_optimal_parameters();
             bloom_filter filternew(parameters);
             int count = 0;
-            for (string val: vec) {
+            for (string& val: vec) {
                 filternew.insert(val);
                 if ((*filter).contains(val))
                     count++;
@@ -284,7 +271,7 @@ int compress_batch(vector<string> vals, FILE *f1, bloom_filter *filter, bool &is
         }
 
         int value = 0;
-        for (size_t index = 0; index < vec.size(); ++index)
+        for (int index = 0; index < vec.size(); ++index)
             lookup[vec[index]] = index;
 
         string stmm = hps::to_string(minmax);
@@ -296,12 +283,7 @@ int compress_batch(vector<string> vals, FILE *f1, bloom_filter *filter, bool &is
         }
 
         string comprst;
-        if (SNAPPY) {
-            snappy::Compress(&stloc[0], stloc.size(), &comprst);
-            header.dictsize = comprst.size();
-        }
-        else
-            header.dictsize = stloc.size();
+        header.dictsize = stloc.size();
         global_dict_memory += stloc.size();
         header.lendiff = distinct_count;
 
@@ -316,7 +298,7 @@ int compress_batch(vector<string> vals, FILE *f1, bloom_filter *filter, bool &is
         if (vec.size() < 256) {
             char offsets[vals.size()];
             int k = 0;
-            for (string i: vals) {
+            for (string& i: vals) {
                 offsets[k] = lookup[i];
                 k++;
             }
@@ -325,17 +307,14 @@ int compress_batch(vector<string> vals, FILE *f1, bloom_filter *filter, bool &is
             fwrite(&header, sizeof(header), 1, f1);
             fwrite(a, diffvals.size() * sizeof(short), 1, f1);
             fwrite(&stmm[0], header.minmaxsize, 1, f1);
-            if (SNAPPY)
-                fwrite(&comprst[0], header.dictsize, 1, f1);
-            else
-                fwrite(&stloc[0], header.dictsize, 1, f1);
+            fwrite(&stloc[0], header.dictsize, 1, f1);
 
             fwrite(&offsets, sizeof(char), vals.size(), f1);
         }
-        else if (globaldict.size() < 65536) {
+        else if (vec.size() < 65536) {
             unsigned short offsets[vals.size()];
             int k = 0;
-            for (string i: vals) {
+            for (string& i: vals) {
                 offsets[k] = lookup[i];
                 k++;
             }
@@ -344,16 +323,13 @@ int compress_batch(vector<string> vals, FILE *f1, bloom_filter *filter, bool &is
             fwrite(&header, sizeof(header), 1, f1);
             fwrite(a, diffvals.size() * sizeof(short), 1, f1);
             fwrite(&stmm[0], header.minmaxsize, 1, f1);
-            if (SNAPPY)
-                fwrite(&comprst[0], header.dictsize, 1, f1);
-            else
-                fwrite(&stloc[0], header.dictsize, 1, f1);
+            fwrite(&stloc[0], header.dictsize, 1, f1);
             fwrite(&offsets, sizeof(unsigned short), vals.size(), f1);
         }
-        if (globaldict.size() > 65536) {
+        if (vec.size() > 65536) {
             unsigned int offsets[vals.size()];
             int k = 0;
-            for (string i: vals) {
+            for (string& i: vals) {
                 offsets[k] = lookup[i];
                 k++;
             }
@@ -362,10 +338,7 @@ int compress_batch(vector<string> vals, FILE *f1, bloom_filter *filter, bool &is
             fwrite(&header, sizeof(header), 1, f1);
             fwrite(a, diffvals.size() * sizeof(short), 1, f1);
             fwrite(&stmm[0], header.minmaxsize, 1, f1);
-            if (SNAPPY)
-                fwrite(&comprst[0], header.dictsize, 1, f1);
-            else
-                fwrite(&stloc[0], header.dictsize, 1, f1);
+            fwrite(&stloc[0], header.dictsize, 1, f1);
             fwrite(&offsets, sizeof(unsigned int), vals.size(), f1);
         }
 
@@ -383,10 +356,8 @@ int ArcadeWriter::compress(char *infile, char *outfile, int startp, int numofval
     vector<int> mcolumns(retcols, retcols + colnum);
     int COLNUM = mcolumns.size();
     vector<vector<int>> sizediff(COLNUM);
-    vector<vector<string>> globaldict(COLNUM);
     //vector<vector <string>> glob(COLNUM);
-    vector<unordered_map<string, bool>> glob(COLNUM);
-    vector<unordered_map<string, size_t>> lookup(COLNUM);
+    vector<unordered_map<string, int>> lookup(COLNUM);
     vector<vector<short>> diffvals(COLNUM);
     bool isdictionary = true;
     bloom_parameters parameters;
@@ -402,11 +373,8 @@ int ArcadeWriter::compress(char *infile, char *outfile, int startp, int numofval
     std::string input;
     input = infile;
     std::clock_t start;
-    double duration;
-    if (strstr(outfile, "snappy"))
-        SNAPPY = 1;
-    else
-        SNAPPY = 0;
+    double duration = 0;
+    SNAPPY = 0;
 
     std::ifstream finput(input.c_str());
 
@@ -446,12 +414,13 @@ int ArcadeWriter::compress(char *infile, char *outfile, int startp, int numofval
         // read a batch of lines from the input file
         start = std::clock();
 
+
         for (int i = 0; i < BLOCKSIZE; ++i) {
             if (!std::getline(finput, line) or num_of_vals1 >= fileheader1.numofvals) {
                 eof = true;
                 break;
             }
-            dataset.push_back(line.substr(0, line.size()));
+            dataset.push_back(line.substr(0, line.size()-1)); //(-1 for yelp)
             ++numValues;
             num_of_vals1++;
         }
@@ -461,12 +430,15 @@ int ArcadeWriter::compress(char *infile, char *outfile, int startp, int numofval
         for (int k = 0; k < COLNUM + 1; k++)
             fwrite(&columnindexes[k], sizeof(int), 1, f1);
         long tell = ftell(f1);
-
+        vector<std::string> column(dataset.size());
         for (int j = 0; j < COLNUM; j++) {
             long tell1 = ftell(f1);
             //compress(dataset, f1, sizediff[j], globaldict[j], glob[j], lookup[j], diffvals[j]);
-            compress_batch(extractColumn(dataset, mcolumns[j]), f1, &filter, isdictionary, sizediff[j], globaldict[j],
-                           glob[j], lookup[j], diffvals[j], blocknum, BLOCKSIZE, SNAPPY, global_dict_memory,
+            extractColumn(dataset, mcolumns[j], column);
+            vector <string> vec = column;
+            create_dict(column, vec);
+            compress_batch(column, vec, f1, &filter, isdictionary, sizediff[j],
+                           lookup[j], diffvals[j], blocknum, BLOCKSIZE, SNAPPY, global_dict_memory,
                            permanent_decision, duration5);
             //compress(slice(dataset,0,dataset.size()-1),f1);
             columnindexes[j] = tell1 - tell;
@@ -484,7 +456,7 @@ int ArcadeWriter::compress(char *infile, char *outfile, int startp, int numofval
     }
 
 
-    //std::cout<<"csv import time: "<< duration <<'\n';
+    std::cout<<"csv import time: "<< duration <<'\n';
     fseek(f1, ft, SEEK_SET);
     fileheader1.numofvals = num_of_vals1;
     fileheader1.numofblocks = ceil(fileheader1.numofvals * 1.0 / BLOCKSIZE);
