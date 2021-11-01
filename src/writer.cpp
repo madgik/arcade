@@ -44,15 +44,11 @@ OutputIt calc_diff(InputIt1 first1, InputIt1 last1,
 }
 
 
-int create_dict(vector<string> &vals, vector <string> &vec){
-    std::sort(vec.begin(), vec.end());
-    vec.erase(std::unique(vec.begin(), vec.end()), vec.end());
-    return 1;
-}
+
 
 
 /*TODO refactor optimise this function, this can be much faster */
-int compress_batch(vector<string> &vals, vector <string> &vec, FILE *f1, bloom_filter *filter, bool &isdictionary, vector<int> &sizediff,
+int compress_batch(vector<string> &vals, FILE *f1, bloom_filter *filter, bool &isdictionary, vector<int> &sizediff,
                    unordered_map<string, int> &lookup,
                    vector<short> &diffvals, int blocknum, int BLOCKSIZE, bool SNAPPY, unsigned long &global_dict_memory,
                    int &permanent_decision, double &duration5) {
@@ -60,14 +56,14 @@ int compress_batch(vector<string> &vals, vector <string> &vec, FILE *f1, bloom_f
     struct D header;
     header.numofvals = vals.size();
     vector<string> minmax(4);
-    /*vector<string> vec = vals;
+    vector<string> vec = vals;
     std::sort(vec.begin(), vec.end());
-    vec.erase(std::unique(vec.begin(), vec.end()), vec.end());*/
+    vec.erase(std::unique(vec.begin(), vec.end()), vec.end());
     int distinct_count = vec.size();
     minmax[0] = vec[0];
     minmax[1] = vec[distinct_count - 1];
 
-    if (vec.size() * 1.0 / vals.size() > 0.99) {
+    if (vec.size() * 1.0 / header.numofvals > 0.99) {
         isdictionary = false;
         header.dictsize = 0;
         header.previndices = 0;
@@ -197,49 +193,49 @@ int compress_batch(vector<string> &vals, vector <string> &vec, FILE *f1, bloom_f
         header.previndices = diffvals.size();
         header.diff = 0; // i am in diff dict
         if (globdsize < 256) {
-            char offsets[vals.size()];
+            char offsets[header.numofvals];
             int k = 0;
             for (string& i: vals) {
                 offsets[k] = lookup[i];
                 k++;
             }
             header.bytes = 2;
-            header.indicessize = vals.size() * sizeof(char);
+            header.indicessize = header.numofvals * sizeof(char);
             fwrite(&header, sizeof(header), 1, f1);
             fwrite(a, diffvals.size() * sizeof(short), 1, f1);
             fwrite(&stmm[0], header.minmaxsize, 1, f1);
             fwrite(&st[0], header.dictsize, 1, f1);
-            fwrite(&offsets, sizeof(char), vals.size(), f1);
+            fwrite(&offsets, sizeof(char), header.numofvals, f1);
         }
         else if (globdsize < 65536) {
-            unsigned short offsets[vals.size()];
+            unsigned short offsets[header.numofvals];
             int k = 0;
             for (string& i: vals) {
                 offsets[k] = lookup[i];
                 k++;
             }
             header.bytes = 1;
-            header.indicessize = vals.size() * sizeof(unsigned short);
+            header.indicessize = header.numofvals * sizeof(unsigned short);
             fwrite(&header, sizeof(header), 1, f1);
             fwrite(a, diffvals.size() * sizeof(short), 1, f1);
             fwrite(&stmm[0], header.minmaxsize, 1, f1);
             fwrite(&st[0], header.dictsize, 1, f1);
-            fwrite(&offsets, sizeof(unsigned short), vals.size(), f1);
+            fwrite(&offsets, sizeof(unsigned short), header.numofvals, f1);
         }
         if (globdsize > 65536) {
-            unsigned int offsets[vals.size()];
+            unsigned int offsets[header.numofvals];
             int k = 0;
             for (string& i: vals) {
                 offsets[k] = lookup[i];
                 k++;
             }
             header.bytes = 0;
-            header.indicessize = vals.size() * sizeof(unsigned int);
+            header.indicessize = header.numofvals * sizeof(unsigned int);
             fwrite(&header, sizeof(header), 1, f1);
             fwrite(a, diffvals.size() * sizeof(short), 1, f1);
             fwrite(&stmm[0], header.minmaxsize, 1, f1);
             fwrite(&st[0], header.dictsize, 1, f1);
-            fwrite(&offsets, sizeof(unsigned int), vals.size(), f1);
+            fwrite(&offsets, sizeof(unsigned int), header.numofvals, f1);
         }
     }
 
@@ -296,20 +292,20 @@ int compress_batch(vector<string> &vals, vector <string> &vec, FILE *f1, bloom_f
 
 
         if (vec.size() < 256) {
-            char offsets[vals.size()];
+            char offsets[header.numofvals];
             int k = 0;
             for (string& i: vals) {
                 offsets[k] = lookup[i];
                 k++;
             }
             header.bytes = 2;
-            header.indicessize = vals.size() * sizeof(char);
+            header.indicessize = header.numofvals * sizeof(char);
             fwrite(&header, sizeof(header), 1, f1);
             fwrite(a, diffvals.size() * sizeof(short), 1, f1);
             fwrite(&stmm[0], header.minmaxsize, 1, f1);
             fwrite(&stloc[0], header.dictsize, 1, f1);
 
-            fwrite(&offsets, sizeof(char), vals.size(), f1);
+            fwrite(&offsets, sizeof(char), header.numofvals, f1);
         }
         else if (vec.size() < 65536) {
             unsigned short offsets[vals.size()];
@@ -319,27 +315,27 @@ int compress_batch(vector<string> &vals, vector <string> &vec, FILE *f1, bloom_f
                 k++;
             }
             header.bytes = 1;
-            header.indicessize = vals.size() * sizeof(unsigned short);
+            header.indicessize = header.numofvals * sizeof(unsigned short);
             fwrite(&header, sizeof(header), 1, f1);
             fwrite(a, diffvals.size() * sizeof(short), 1, f1);
             fwrite(&stmm[0], header.minmaxsize, 1, f1);
             fwrite(&stloc[0], header.dictsize, 1, f1);
-            fwrite(&offsets, sizeof(unsigned short), vals.size(), f1);
+            fwrite(&offsets, sizeof(unsigned short), header.numofvals, f1);
         }
         if (vec.size() > 65536) {
-            unsigned int offsets[vals.size()];
+            unsigned int offsets[header.numofvals];
             int k = 0;
             for (string& i: vals) {
                 offsets[k] = lookup[i];
                 k++;
             }
             header.bytes = 0;
-            header.indicessize = vals.size() * sizeof(unsigned int);
+            header.indicessize = header.numofvals * sizeof(unsigned int);
             fwrite(&header, sizeof(header), 1, f1);
             fwrite(a, diffvals.size() * sizeof(short), 1, f1);
             fwrite(&stmm[0], header.minmaxsize, 1, f1);
             fwrite(&stloc[0], header.dictsize, 1, f1);
-            fwrite(&offsets, sizeof(unsigned int), vals.size(), f1);
+            fwrite(&offsets, sizeof(unsigned int), header.numofvals, f1);
         }
 
 
@@ -435,9 +431,7 @@ int ArcadeWriter::compress(char *infile, char *outfile, int startp, int numofval
             long tell1 = ftell(f1);
             //compress(dataset, f1, sizediff[j], globaldict[j], glob[j], lookup[j], diffvals[j]);
             extractColumn(dataset, mcolumns[j], column);
-            vector <string> vec = column;
-            create_dict(column, vec);
-            compress_batch(column, vec, f1, &filter, isdictionary, sizediff[j],
+            compress_batch(column,  f1, &filter, isdictionary, sizediff[j],
                            lookup[j], diffvals[j], blocknum, BLOCKSIZE, SNAPPY, global_dict_memory,
                            permanent_decision, duration5);
             //compress(slice(dataset,0,dataset.size()-1),f1);
